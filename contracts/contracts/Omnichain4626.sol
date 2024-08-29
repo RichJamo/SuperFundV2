@@ -8,24 +8,6 @@ import "@zetachain/protocol-contracts/contracts/zevm/SystemContract.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/zContract.sol";
 import "@zetachain/toolkit/contracts/OnlySystem.sol";
 
-contract Greeting is zContract, OnlySystem {
-    SystemContract public systemContract;
-    event Greet(string message);
-
-    constructor(address systemContractAddress) {
-        systemContract = SystemContract(systemContractAddress);
-    }
-
-    function onCrossChainCall(
-        zContext calldata context,
-        address zrc20,
-        uint256 amount,
-        bytes calldata message
-    ) external virtual override onlySystem(systemContract) {
-        string memory name = abi.decode(message, (string));
-        emit Greet(name);
-    }
-}
 /**
  * @dev Implementation of the ERC-4626 "Tokenized Vault Standard" as defined in
  * https://eips.ethereum.org/EIPS/eip-4626[ERC-4626].
@@ -79,47 +61,91 @@ contract Omnichain4626 is ERC4626, zContract, OnlySystem {
         systemContract = SystemContract(systemContractAddress);
     }
 
+    struct Params {
+        address target;
+        bytes to;
+    }
+
     function onCrossChainCall(
         zContext calldata context,
-        address zrc20,
+        address zrc20, // what is this? the zrc20 that came in
         uint256 amount,
         bytes calldata message
     ) external virtual override onlySystem(systemContract) {
-        if (deposit) {
+        Params memory params = Params({target: address(0), to: bytes("")});
+        (address targetToken, bytes memory recipient) = abi.decode(
+            message,
+            (address, bytes)
+        );
+        params.target = targetToken;
+        params.to = recipient;
+        bool deposit = true;
+
+        // if (deposit) {
             // Deposit - USDC coming from Ethereum (e.g.), going to BSC via Zeta
-            //
-            // this part actually doesn't belong in this function - it will be called by our UI to the Ethereum Gateway
-            // the call below is made to the Gateway contract on Ethereum
-            // it has to be directed at a universal app, and the onCrossChainCall function will be called
-            depositAndCall(univ_app_address, deposit_amt, USDC_address_eth, bytes calldata payload, RevertOptions calldata revertOptions);
-            //
 
             // the call part from the depositAndCall above will prompt a call to BSC to get assets amount
-            wrap the below in _convertToShares(// need to call destination chain);
+            // wrap the below in _convertToShares(// need to call destination chain);
             // maybe these next two can be combined into one
-            uint256 shares = call(bsc_dummy_vault_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
+            // uint256 shares = call(bsc_dummy_vault_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
             //this next call is correct - we are withdrawing from Zeta to the target chain
-            withdrawAndCall(bsc_dummy_vault_address, usdc_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions);
+            // need to swap USDC.ETH to USDC.BSC
+        swapAndWithdraw(zrc20, amount, params.target, params.to);
+
+            // withdrawAndCall(bsc_dummy_vault_address, usdc_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions);
             // the call here is a call to our dummy vault to deposit into Aave
 
-        } else if (withdrawal part 1) {
-            // Withdraw - USDC coming from BSC (e.g.), going to Ethereum via Zeta
-            //
-            // this next part would be done by our UI to the Ethereum Gateway
-            call(address receiver, bytes calldata payload, RevertOptions calldata revertOptions)
-            //
-            // the call above will prompt a call from here to BSC to get the asset amount based on shares
-            uint256 amount = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
-            // this call prompts our contract on BSC to initiate the withdrawal and then send a deposit back this way
+        // } else if (withdrawal part 1) {
+        //     // Withdraw - USDC coming from BSC (e.g.), going to Ethereum via Zeta
+        //     //
+        //     // this next part would be done by our UI to the Ethereum Gateway
+        //     call(address receiver, bytes calldata payload, RevertOptions calldata revertOptions)
+        //     //
+        //     // the call above will prompt a call from here to BSC to get the asset amount based on shares
+        //     uint256 amount = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+        //     // this call prompts our contract on BSC to initiate the withdrawal and then send a deposit back this way
 
-        } else if (withdrawal part 2) { // i'm not sure this is necessary, as the first part of the conditional can maybe handle it?
-            uint256 assets = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
-            uint256 assets = _convertToAssets(// need to call destination chain);
-            // would need this call here to withdraw from Aave and withdraw fund back to Zeta?
-            call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
-            // this last withdraw send the USDC from Zeta back to Ethereum
-            withdraw(bytes memory receiver, uint256 amount, address zrc20, RevertOptions calldata revertOptions);
-        }
+        // } else if (withdrawal part 2) { // i'm not sure this is necessary, as the first part of the conditional can maybe handle it?
+        //     uint256 assets = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+        //     uint256 assets = _convertToAssets(// need to call destination chain);
+        //     // would need this call here to withdraw from Aave and withdraw fund back to Zeta?
+        //     call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
+        //     // this last withdraw send the USDC from Zeta back to Ethereum
+        //     withdraw(bytes memory receiver, uint256 amount, address zrc20, RevertOptions calldata revertOptions);
+        // }
+    }
+
+function swapAndWithdraw(
+        address inputToken,
+        uint256 amount,
+        address targetToken,
+        bytes memory recipient,
+    ) internal {
+        uint256 inputForGas;
+        address gasZRC20;
+        uint256 gasFee;
+ 
+        (gasZRC20, gasFee) = IZRC20(targetToken).withdrawGasFee();
+
+        inputForGas = SwapHelperLib.swapTokensForExactTokens(
+            systemContract,
+            inputToken,
+            gasFee,
+            gasZRC20,
+            amount
+        );
+ 
+        uint256 outputAmount = SwapHelperLib.swapExactTokensForTokens(
+            systemContract,
+            inputToken,
+            amount - inputForGas,
+            targetToken,
+            0
+        );
+ 
+        IZRC20(gasZRC20).approve(targetToken, gasFee);
+        IZRC20(targetToken).withdraw(recipient, outputAmount); // in final version, switch to the withdrawand call
+        // IZRC20(targetToken).withdrawAndCall(recipient, outputAmount, gasZRC20, bytes("function selector & abi encoded arguments"), 0, RevertOptions(false));
     }
 
     /**
