@@ -1,63 +1,54 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v5.0.0) (token/ERC20/extensions/ERC4626.sol)
+// OpenZeppelin Contracts (last updated v4.8.1) (token/ERC20/extensions/ERC4626.sol)
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-import {ERC4626} from "../token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/SystemContract.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/zContract.sol";
 import "@zetachain/toolkit/contracts/OnlySystem.sol";
-
+import "@zetachain/toolkit/contracts/SwapHelperLib.sol";
 /**
- * @dev Implementation of the ERC-4626 "Tokenized Vault Standard" as defined in
- * https://eips.ethereum.org/EIPS/eip-4626[ERC-4626].
+ * @dev Implementation of the ERC4626 "Tokenized Vault Standard" as defined in
+ * https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
  *
- * This extension allows the minting and burning of "shares" (represented using the ERC-20 inheritance) in exchange for
+ * This extension allows the minting and burning of "shares" (represented using the ERC20 inheritance) in exchange for
  * underlying "assets" through standardized {deposit}, {mint}, {redeem} and {burn} workflows. This contract extends
- * the ERC-20 standard. Any additional extensions included along it would affect the "shares" token represented by this
+ * the ERC20 standard. Any additional extensions included along it would affect the "shares" token represented by this
  * contract and not the "assets" token which is an independent contract.
  *
- * [CAUTION]
- * ====
- * In empty (or nearly empty) ERC-4626 vaults, deposits are at high risk of being stolen through frontrunning
- * with a "donation" to the vault that inflates the price of a share. This is variously known as a donation or inflation
+ * CAUTION: When the vault is empty or nearly empty, deposits are at high risk of being stolen through frontrunning with
+ * a "donation" to the vault that inflates the price of a share. This is variously known as a donation or inflation
  * attack and is essentially a problem of slippage. Vault deployers can protect against this attack by making an initial
  * deposit of a non-trivial amount of the asset, such that price manipulation becomes infeasible. Withdrawals may
- * similarly be affected by slippage. Users can protect against this attack as well as unexpected slippage in general by
+ * similarly be affected by slippage. Users can protect against this attack as well unexpected slippage in general by
  * verifying the amount received is as expected, using a wrapper that performs these checks such as
  * https://github.com/fei-protocol/ERC4626#erc4626router-and-base[ERC4626Router].
  *
- * Since v4.9, this implementation introduces configurable virtual assets and shares to help developers mitigate that risk.
- * The `_decimalsOffset()` corresponds to an offset in the decimal representation between the underlying asset's decimals
- * and the vault decimals. This offset also determines the rate of virtual shares to virtual assets in the vault, which
- * itself determines the initial exchange rate. While not fully preventing the attack, analysis shows that the default
- * offset (0) makes it non-profitable even if an attacker is able to capture value from multiple user deposits, as a result
- * of the value being captured by the virtual shares (out of the attacker's donation) matching the attacker's expected gains.
- * With a larger offset, the attack becomes orders of magnitude more expensive than it is profitable. More details about the
- * underlying math can be found xref:erc4626.adoc#inflation-attack[here].
- *
- * The drawback of this approach is that the virtual shares do capture (a very small) part of the value being accrued
- * to the vault. Also, if the vault experiences losses, the users try to exit the vault, the virtual shares and assets
- * will cause the first user to exit to experience reduced losses in detriment to the last users that will experience
- * bigger losses. Developers willing to revert back to the pre-v4.9 behavior just need to override the
- * `_convertToShares` and `_convertToAssets` functions.
- *
- * To learn more, check out our xref:ROOT:erc4626.adoc[ERC-4626 guide].
- * ====
+ * _Available since v4.7._
  */
-contract Omnichain4626 is ERC4626, zContract, OnlySystem {
+contract ZRC4626 is ERC20, IERC4626, zContract, OnlySystem {
+    using Math for uint256;
+
+    IERC20 private immutable _asset;
+    uint8 private immutable _decimals;
     SystemContract public systemContract;
+
     /**
-     * @dev Set the underlying asset contract. This must be an ERC20-compatible contract (ERC-20 or ERC-777).
+     * @dev Set the underlying asset contract. This must be an ERC20-compatible contract (ERC20 or ERC777).
      */
     constructor(
-        IZRC20 asset_, // this will be a ZRC20 token I'm thinking, so might have to change to that standard here?
+        string memory name_,
+        string memory symbol_,
+        IERC20 asset_,
         address systemContractAddress
-    )
-        // Call the constructor of the ERC4626 contract
-        ERC4626(asset_)
-    {
-        // Additional initialization for your contract
+    ) ERC20(name_, symbol_) {
+        (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(asset_);
+        _decimals = success ? assetDecimals : super.decimals();
+        _asset = asset_;
         systemContract = SystemContract(systemContractAddress);
     }
 
@@ -79,21 +70,21 @@ contract Omnichain4626 is ERC4626, zContract, OnlySystem {
         );
         params.target = targetToken;
         params.to = recipient;
-        bool deposit = true;
+        // bool isDeposit = true;
 
-        // if (deposit) {
-            // Deposit - USDC coming from Ethereum (e.g.), going to BSC via Zeta
+        // if (isDeposit) {
+        // Deposit - USDC coming from Ethereum (e.g.), going to BSC via Zeta
 
-            // the call part from the depositAndCall above will prompt a call to BSC to get assets amount
-            // wrap the below in _convertToShares(// need to call destination chain);
-            // maybe these next two can be combined into one
-            // uint256 shares = call(bsc_dummy_vault_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
-            //this next call is correct - we are withdrawing from Zeta to the target chain
-            // need to swap USDC.ETH to USDC.BSC
+        // the call part from the depositAndCall above will prompt a call to BSC to get assets amount
+        // wrap the below in _convertToShares(// need to call destination chain);
+        // maybe these next two can be combined into one
+        // uint256 shares = call(bsc_dummy_vault_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
+        //this next call is correct - we are withdrawing from Zeta to the target chain
+        // need to swap USDC.ETH to USDC.BSC
         swapAndWithdraw(zrc20, amount, params.target, params.to);
 
-            // withdrawAndCall(bsc_dummy_vault_address, usdc_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions);
-            // the call here is a call to our dummy vault to deposit into Aave
+        // withdrawAndCall(bsc_dummy_vault_address, usdc_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions);
+        // the call here is a call to our dummy vault to deposit into Aave
 
         // } else if (withdrawal part 1) {
         //     // Withdraw - USDC coming from BSC (e.g.), going to Ethereum via Zeta
@@ -102,11 +93,11 @@ contract Omnichain4626 is ERC4626, zContract, OnlySystem {
         //     call(address receiver, bytes calldata payload, RevertOptions calldata revertOptions)
         //     //
         //     // the call above will prompt a call from here to BSC to get the asset amount based on shares
-        //     uint256 amount = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+        //     uint256 amount = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
         //     // this call prompts our contract on BSC to initiate the withdrawal and then send a deposit back this way
 
         // } else if (withdrawal part 2) { // i'm not sure this is necessary, as the first part of the conditional can maybe handle it?
-        //     uint256 assets = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+        //     uint256 assets = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
         //     uint256 assets = _convertToAssets(// need to call destination chain);
         //     // would need this call here to withdraw from Aave and withdraw fund back to Zeta?
         //     call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
@@ -115,16 +106,16 @@ contract Omnichain4626 is ERC4626, zContract, OnlySystem {
         // }
     }
 
-function swapAndWithdraw(
+    function swapAndWithdraw(
         address inputToken,
         uint256 amount,
         address targetToken,
-        bytes memory recipient,
+        bytes memory recipient
     ) internal {
         uint256 inputForGas;
         address gasZRC20;
         uint256 gasFee;
- 
+
         (gasZRC20, gasFee) = IZRC20(targetToken).withdrawGasFee();
 
         inputForGas = SwapHelperLib.swapTokensForExactTokens(
@@ -134,7 +125,7 @@ function swapAndWithdraw(
             gasZRC20,
             amount
         );
- 
+
         uint256 outputAmount = SwapHelperLib.swapExactTokensForTokens(
             systemContract,
             inputToken,
@@ -142,7 +133,7 @@ function swapAndWithdraw(
             targetToken,
             0
         );
- 
+
         IZRC20(gasZRC20).approve(targetToken, gasFee);
         IZRC20(targetToken).withdraw(recipient, outputAmount); // in final version, switch to the withdrawand call
         // IZRC20(targetToken).withdrawAndCall(recipient, outputAmount, gasZRC20, bytes("function selector & abi encoded arguments"), 0, RevertOptions(false));
@@ -155,7 +146,9 @@ function swapAndWithdraw(
         IERC20 asset_
     ) private view returns (bool, uint8) {
         (bool success, bytes memory encodedDecimals) = address(asset_)
-            .staticcall(abi.encodeCall(IERC20Metadata.decimals, ()));
+            .staticcall(
+                abi.encodeWithSelector(IERC20Metadata.decimals.selector)
+            );
         if (success && encodedDecimals.length >= 32) {
             uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
             if (returnedDecimals <= type(uint8).max) {
@@ -166,10 +159,9 @@ function swapAndWithdraw(
     }
 
     /**
-     * @dev Decimals are computed by adding the decimal offset on top of the underlying asset's decimals. This
-     * "original" value is cached during construction of the vault contract. If this read operation fails (e.g., the
-     * asset has not been created yet), a default of 18 is used to represent the underlying asset's decimals.
-     *
+     * @dev Decimals are read from the underlying asset in the constructor and cached. If this fails (e.g., the asset
+     * has not been created yet), the cached value is set to a default obtained by `super.decimals()` (which depends on
+     * inheritance but is most likely 18). Override this function in order to set a guaranteed hardcoded value.
      * See {IERC20Metadata-decimals}.
      */
     function decimals()
@@ -179,88 +171,96 @@ function swapAndWithdraw(
         override(IERC20Metadata, ERC20)
         returns (uint8)
     {
-        return _underlyingDecimals + _decimalsOffset();
+        return _decimals;
     }
 
     /** @dev See {IERC4626-asset}. */
-    function asset() public view virtual returns (address) {
+    function asset() public view virtual override returns (address) {
         return address(_asset);
     }
 
     /** @dev See {IERC4626-totalAssets}. */
-    function totalAssets() public view virtual returns (uint256) {
+    function totalAssets() public view virtual override returns (uint256) {
         return _asset.balanceOf(address(this));
     }
 
     /** @dev See {IERC4626-convertToShares}. */
     function convertToShares(
         uint256 assets
-    ) public view virtual returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
+    ) public view virtual override returns (uint256 shares) {
+        return _convertToShares(assets, Math.Rounding.Down);
     }
 
     /** @dev See {IERC4626-convertToAssets}. */
     function convertToAssets(
         uint256 shares
-    ) public view virtual returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Floor);
+    ) public view virtual override returns (uint256 assets) {
+        return _convertToAssets(shares, Math.Rounding.Down);
     }
 
     /** @dev See {IERC4626-maxDeposit}. */
-    function maxDeposit(address) public view virtual returns (uint256) {
-        return type(uint256).max;
+    function maxDeposit(
+        address
+    ) public view virtual override returns (uint256) {
+        return _isVaultCollateralized() ? type(uint256).max : 0;
     }
 
     /** @dev See {IERC4626-maxMint}. */
-    function maxMint(address) public view virtual returns (uint256) {
+    function maxMint(address) public view virtual override returns (uint256) {
         return type(uint256).max;
     }
 
     /** @dev See {IERC4626-maxWithdraw}. */
-    function maxWithdraw(address owner) public view virtual returns (uint256) {
-        return _convertToAssets(balanceOf(owner), Math.Rounding.Floor);
+    function maxWithdraw(
+        address owner
+    ) public view virtual override returns (uint256) {
+        return _convertToAssets(balanceOf(owner), Math.Rounding.Down);
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
-    function maxRedeem(address owner) public view virtual returns (uint256) {
+    function maxRedeem(
+        address owner
+    ) public view virtual override returns (uint256) {
         return balanceOf(owner);
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
     function previewDeposit(
         uint256 assets
-    ) public view virtual returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Floor);
+    ) public view virtual override returns (uint256) {
+        return _convertToShares(assets, Math.Rounding.Down);
     }
 
     /** @dev See {IERC4626-previewMint}. */
-    function previewMint(uint256 shares) public view virtual returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Ceil);
+    function previewMint(
+        uint256 shares
+    ) public view virtual override returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Up);
     }
 
     /** @dev See {IERC4626-previewWithdraw}. */
     function previewWithdraw(
         uint256 assets
-    ) public view virtual returns (uint256) {
-        return _convertToShares(assets, Math.Rounding.Ceil);
+    ) public view virtual override returns (uint256) {
+        return _convertToShares(assets, Math.Rounding.Up);
     }
 
     /** @dev See {IERC4626-previewRedeem}. */
     function previewRedeem(
         uint256 shares
-    ) public view virtual returns (uint256) {
-        return _convertToAssets(shares, Math.Rounding.Floor);
+    ) public view virtual override returns (uint256) {
+        return _convertToAssets(shares, Math.Rounding.Down);
     }
 
     /** @dev See {IERC4626-deposit}. */
     function deposit(
         uint256 assets,
         address receiver
-    ) public virtual returns (uint256) {
-        uint256 maxAssets = maxDeposit(receiver);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxDeposit(receiver, assets, maxAssets);
-        }
+    ) public virtual override returns (uint256) {
+        require(
+            assets <= maxDeposit(receiver),
+            "ERC4626: deposit more than max"
+        );
 
         uint256 shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
@@ -268,15 +268,16 @@ function swapAndWithdraw(
         return shares;
     }
 
-    /** @dev See {IERC4626-mint}. */
+    /** @dev See {IERC4626-mint}.
+     *
+     * As opposed to {deposit}, minting is allowed even if the vault is in a state where the price of a share is zero.
+     * In this case, the shares will be minted without requiring any assets to be deposited.
+     */
     function mint(
         uint256 shares,
         address receiver
-    ) public virtual returns (uint256) {
-        uint256 maxShares = maxMint(receiver);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxMint(receiver, shares, maxShares);
-        }
+    ) public virtual override returns (uint256) {
+        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
 
         uint256 assets = previewMint(shares);
         _deposit(_msgSender(), receiver, assets, shares);
@@ -289,11 +290,11 @@ function swapAndWithdraw(
         uint256 assets,
         address receiver,
         address owner
-    ) public virtual returns (uint256) {
-        uint256 maxAssets = maxWithdraw(owner);
-        if (assets > maxAssets) {
-            revert ERC4626ExceededMaxWithdraw(owner, assets, maxAssets);
-        }
+    ) public virtual override returns (uint256) {
+        require(
+            assets <= maxWithdraw(owner),
+            "ERC4626: withdraw more than max"
+        );
 
         uint256 shares = previewWithdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
@@ -306,11 +307,8 @@ function swapAndWithdraw(
         uint256 shares,
         address receiver,
         address owner
-    ) public virtual returns (uint256) {
-        uint256 maxShares = maxRedeem(owner);
-        if (shares > maxShares) {
-            revert ERC4626ExceededMaxRedeem(owner, shares, maxShares);
-        }
+    ) public virtual override returns (uint256) {
+        require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
@@ -320,17 +318,31 @@ function swapAndWithdraw(
 
     /**
      * @dev Internal conversion function (from assets to shares) with support for rounding direction.
+     *
+     * Will revert if assets > 0, totalSupply > 0 and totalAssets = 0. That corresponds to a case where any asset
+     * would represent an infinite amount of shares.
      */
     function _convertToShares(
         uint256 assets,
         Math.Rounding rounding
-    ) internal view virtual returns (uint256) {
+    ) internal view virtual returns (uint256 shares) {
+        uint256 supply = totalSupply();
         return
-            assets.mulDiv(
-                totalSupply() + 10 ** _decimalsOffset(),
-                totalAssets() + 1,
-                rounding
-            );
+            (assets == 0 || supply == 0)
+                ? _initialConvertToShares(assets, rounding)
+                : assets.mulDiv(supply, totalAssets(), rounding);
+    }
+
+    /**
+     * @dev Internal conversion function (from assets to shares) to apply when the vault is empty.
+     *
+     * NOTE: Make sure to keep this function consistent with {_initialConvertToAssets} when overriding it.
+     */
+    function _initialConvertToShares(
+        uint256 assets,
+        Math.Rounding /*rounding*/
+    ) internal view virtual returns (uint256 shares) {
+        return assets;
     }
 
     /**
@@ -339,13 +351,24 @@ function swapAndWithdraw(
     function _convertToAssets(
         uint256 shares,
         Math.Rounding rounding
-    ) internal view virtual returns (uint256) {
+    ) internal view virtual returns (uint256 assets) {
+        uint256 supply = totalSupply();
         return
-            shares.mulDiv(
-                totalAssets() + 1,
-                totalSupply() + 10 ** _decimalsOffset(),
-                rounding
-            );
+            (supply == 0)
+                ? _initialConvertToAssets(shares, rounding)
+                : shares.mulDiv(totalAssets(), supply, rounding);
+    }
+
+    /**
+     * @dev Internal conversion function (from shares to assets) to apply when the vault is empty.
+     *
+     * NOTE: Make sure to keep this function consistent with {_initialConvertToShares} when overriding it.
+     */
+    function _initialConvertToAssets(
+        uint256 shares,
+        Math.Rounding /*rounding*/
+    ) internal view virtual returns (uint256 assets) {
+        return shares;
     }
 
     /**
@@ -357,7 +380,7 @@ function swapAndWithdraw(
         uint256 assets,
         uint256 shares
     ) internal virtual {
-        // If _asset is ERC-777, `transferFrom` can trigger a reentrancy BEFORE the transfer happens through the
+        // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
         // calls the vault, which is assumed not malicious.
         //
@@ -384,7 +407,7 @@ function swapAndWithdraw(
             _spendAllowance(owner, caller, shares);
         }
 
-        // If _asset is ERC-777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
+        // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
         // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
         // calls the vault, which is assumed not malicious.
         //
@@ -396,7 +419,10 @@ function swapAndWithdraw(
         emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
-    function _decimalsOffset() internal view virtual returns (uint8) {
-        return 0;
+    /**
+     * @dev Checks if vault is "healthy" in the sense of having assets backing the circulating shares.
+     */
+    function _isVaultCollateralized() private view returns (bool) {
+        return totalAssets() > 0 || totalSupply() == 0;
     }
 }
