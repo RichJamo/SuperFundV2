@@ -85,8 +85,41 @@ contract Omnichain4626 is ERC4626, zContract, OnlySystem {
         uint256 amount,
         bytes calldata message
     ) external virtual override onlySystem(systemContract) {
-        string memory name = abi.decode(message, (string));
-        emit Greet(name); // we need to put in here the logic of what should happen if USDC is coming back from another chain, I guess?
+        if (deposit) {
+            // Deposit - USDC coming from Ethereum (e.g.), going to BSC via Zeta
+            //
+            // this part actually doesn't belong in this function - it will be called by our UI to the Ethereum Gateway
+            // the call below is made to the Gateway contract on Ethereum
+            // it has to be directed at a universal app, and the onCrossChainCall function will be called
+            depositAndCall(univ_app_address, deposit_amt, USDC_address_eth, bytes calldata payload, RevertOptions calldata revertOptions);
+            //
+
+            // the call part from the depositAndCall above will prompt a call to BSC to get assets amount
+            wrap the below in _convertToShares(// need to call destination chain);
+            // maybe these next two can be combined into one
+            uint256 shares = call(bsc_dummy_vault_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
+            //this next call is correct - we are withdrawing from Zeta to the target chain
+            withdrawAndCall(bsc_dummy_vault_address, usdc_address, zrc20_address_eth_bsc, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions);
+            // the call here is a call to our dummy vault to deposit into Aave
+
+        } else if (withdrawal part 1) {
+            // Withdraw - USDC coming from BSC (e.g.), going to Ethereum via Zeta
+            //
+            // this next part would be done by our UI to the Ethereum Gateway
+            call(address receiver, bytes calldata payload, RevertOptions calldata revertOptions)
+            //
+            // the call above will prompt a call from here to BSC to get the asset amount based on shares
+            uint256 amount = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+            // this call prompts our contract on BSC to initiate the withdrawal and then send a deposit back this way
+
+        } else if (withdrawal part 2) { // i'm not sure this is necessary, as the first part of the conditional can maybe handle it?
+            uint256 assets = call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)         
+            uint256 assets = _convertToAssets(// need to call destination chain);
+            // would need this call here to withdraw from Aave and withdraw fund back to Zeta?
+            call(bytes memory receiver, address zrc20, bytes calldata message, uint256 gasLimit, RevertOptions calldata revertOptions)
+            // this last withdraw send the USDC from Zeta back to Ethereum
+            withdraw(bytes memory receiver, uint256 amount, address zrc20, RevertOptions calldata revertOptions);
+        }
     }
 
     /**
