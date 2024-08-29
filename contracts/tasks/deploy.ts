@@ -17,11 +17,22 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
       `Wallet not found. Please, run "npx hardhat account --save" or set PRIVATE_KEY env variable (for example, in a .env file)`
     );
   }
-
   const systemContract = getAddress("systemContract", network);
+  if (!systemContract) {
+    throw new Error(`System contract address not found for ${network}`);
+  }
 
-  const factory = await hre.ethers.getContractFactory(args.name);
-  const contract = await factory.deploy(systemContract);
+  // Fetch the constructor parameters
+  const name = args.name || "Default Name";
+  const symbol = args.symbol || "SYM";
+  const assetaddress = args.assetaddress; // This should be passed as an argument
+  if (!assetaddress) {
+    throw new Error("Asset address is required");
+  }
+
+  // Deploy the contract with all the necessary constructor parameters
+  const factory = await hre.ethers.getContractFactory("ZRC4626");
+  const contract = await factory.deploy(name, symbol, assetaddress, systemContract);
   await contract.deployed();
 
   const isTestnet = network === "zeta_testnet";
@@ -43,4 +54,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 
 task("deploy", "Deploy the contract", main)
   .addFlag("json", "Output in JSON")
-  .addOptionalParam("name", "Contract to deploy", "Greeting");
+  .addOptionalParam("contractname", "Contract to deploy", "Greeting")
+  .addOptionalParam("name", "Token name", "RichToken")
+  .addOptionalParam("symbol", "Token symbol", "RTR")
+  .addParam("assetaddress", "The address of the asset ERC20 token");
