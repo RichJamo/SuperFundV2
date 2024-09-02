@@ -176,11 +176,13 @@ contract ZRC4626 is ERC20, IERC4626, zContract, OnlySystem {
 
     /** @dev See {IERC4626-asset}. */
     function asset() public view virtual override returns (address) {
+        // return address of asset on target chain?
         return address(_asset);
     }
 
     /** @dev See {IERC4626-totalAssets}. */
     function totalAssets() public view virtual override returns (uint256) {
+        // make call to target chain to get total assets
         return _asset.balanceOf(address(this));
     }
 
