@@ -29,14 +29,6 @@ export default function Page() {
           <ul className="space-y-4">
             <li
               className={`cursor-pointer ${
-                activeSection === "clients" ? "font-bold" : ""
-              }`}
-              onClick={() => setActiveSection("clients")}
-            >
-              My Clients
-            </li>
-            <li
-              className={`cursor-pointer ${
                 activeSection === "vaults" ? "font-bold" : ""
               }`}
               onClick={() => setActiveSection("vaults")}

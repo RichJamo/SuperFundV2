@@ -23,7 +23,6 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4 text-zinc-100">Selected Client</h2>
       {loading ? (
         <p>Loading...</p>
       ) : (
