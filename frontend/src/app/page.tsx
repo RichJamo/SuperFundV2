@@ -18,7 +18,7 @@ export default function Page() {
   );
 
   return (
-    <main className="p-4 pb-10 min-h-[100vh] flex container max-w-screen-lg mx-auto relative">
+    <main className="p-4 pb-10 min-h-[100vh] flex container mx-auto relative overflow-x-hidden">
       {account && (
         <nav className="w-3/8 bg-gray-800 text-white p-6 rounded-lg">
           <div className="mb-8">
