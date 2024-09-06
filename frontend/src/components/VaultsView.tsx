@@ -3,6 +3,9 @@ import { TransactionButton } from "thirdweb/react";
 import { Vault } from "../types/types";
 import { Address } from "thirdweb";
 
+import { PayEmbed } from "thirdweb/react";
+import { client } from "@/utils/client";
+
 interface VaultsViewProps {
   loading: boolean;
   vaults: Vault[];
@@ -20,7 +23,6 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   depositTransaction,
   withdrawTransaction,
 }) => {
-
   return (
     <div>
       {loading ? (
@@ -54,7 +56,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
               </tr>
             </thead>
             <tbody className="bg-gray-900">
-              {vaults.map(vault => (
+              {vaults.map((vault) => (
                 <tr key={vault.id}>
                   <td className="px-4 py-4 whitespace-nowrap">{vault.chain}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
@@ -70,13 +72,20 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
-                      <TransactionButton
+                      {/* <TransactionButton
                         transaction={() =>
                           depositTransaction(vault.id as Address)
                         }
                       >
                         Deposit
-                      </TransactionButton>
+                      </TransactionButton> */}
+
+                      <button
+                        className="w-[165px] rounded-md text-black bg-white"
+                        onClick={() => <PayEmbed client={client} />}
+                      >
+                        Deposit
+                      </button>
                       <TransactionButton
                         transaction={() =>
                           withdrawTransaction(vault.id as Address)
@@ -92,7 +101,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
           </table>
         </div>
       )}
-      { (
+      {
         <div className="mt-4">
           <h2 className="text-xl font-bold mb-4 text-zinc-100">
             Amount to Deposit/Withdraw
@@ -100,11 +109,11 @@ const VaultsView: React.FC<VaultsViewProps> = ({
           <input
             type="number"
             value={transactionAmount}
-            onChange={e => setTransactionAmount(e.target.value)}
+            onChange={(e) => setTransactionAmount(e.target.value)}
             className="px-4 py-2 border border-gray-00 rounded mb-2 text-gray-900"
           />
         </div>
-      )}
+      }
     </div>
   );
 };
