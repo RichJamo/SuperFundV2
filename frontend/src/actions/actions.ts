@@ -72,7 +72,8 @@ export const executeWithdrawal = async (vaultId: Address, activeAccount: Account
   alert("Transaction confirmed");
 };
 
-export const fetchUserVaultBalance = async (clientSmartAccountAddress: Address, vaultAddress: Address) => {
+export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: Address) => {
+  console.log("got here")
   const contract = getContract({
     client,
     chain: arbitrum,
@@ -80,7 +81,8 @@ export const fetchUserVaultBalance = async (clientSmartAccountAddress: Address, 
   });
   const balance = await getBalance({
     contract,
-    address: clientSmartAccountAddress
+    address: userAddress
   });
+  console.log("balance", balance?.displayValue);
   return balance?.displayValue;
 }

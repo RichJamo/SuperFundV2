@@ -12,7 +12,6 @@ import { VAULT_IDS } from "../constants/index";
 import { Address } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
-// import { updateUserVaultBalances } from "../actions/actions";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -32,6 +31,29 @@ const VaultsContainer = () => {
     throw new Error("No active account found");
   }
 
+  async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {
+    // Create a new array with updated vault balances
+    const updatedVaults = await Promise.all(
+      formattedVaults.map(async (vault) => {
+        try {
+          const balance = await fetchUserVaultBalance(
+            activeAccount?.address as Address,
+            vault.id as Address
+          );
+          console.log("balance", balance);
+          return { ...vault, userBalance: balance }; // Return updated vault
+        } catch (error) {
+          console.error(`Error fetching balance for vault ${vault.id}:`, error);
+          return { ...vault, userBalance: "Error" }; // Handle error
+        }
+      })
+    );
+  
+    // Update the state with the new array
+    setVaults(updatedVaults);
+  }
+  
+
   const handleDepositTransaction = async (vaultId: Address) => {
     try {
       setTransactionAmount;
@@ -41,7 +63,7 @@ const VaultsContainer = () => {
         BigInt(transactionAmount),
       );
       // refetch();
-      // updateUserVaultBalances();
+      updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
     }
@@ -59,7 +81,7 @@ const VaultsContainer = () => {
         BigInt(transactionAmount),
       );
       // refetch();
-      // updateUserVaultBalances();
+      updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
     }
@@ -69,18 +91,18 @@ const VaultsContainer = () => {
     async function init() {
       try {
         const data: VaultData[] = await fetchVaultData(VAULT_IDS);
-
+  
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
           const { id, inputToken, name, rates, totalValueLockedUSD } =
             vaultData;
-
+  
           const lenderVariableRate = rates.find(
             (rate) => rate.type === "VARIABLE" && rate.id.startsWith("LENDER")
           );
           const borrowerVariableRate = rates.find(
             (rate) => rate.type === "VARIABLE" && rate.id.startsWith("BORROWER")
           );
-
+  
           return {
             id,
             name: name || "Unnamed Vault",
@@ -102,10 +124,12 @@ const VaultsContainer = () => {
             userBalance: "N/A",
           };
         });
-
+  
         setVaults(formattedVaults);
-
-        
+  
+        // Fetch user balances after setting the vaults
+        await updateUserVaultBalances(formattedVaults);
+        console.log("formattedVaults", formattedVaults);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
@@ -116,10 +140,7 @@ const VaultsContainer = () => {
       init();
     }
   }, [activeAccount]);
-
-  useEffect(() => {
-    // updateUserVaultBalances();
-  }, [vaults]);
+  
 
   const handleUserChange = (username: string) => {
   };
