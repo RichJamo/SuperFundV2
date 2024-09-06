@@ -5,6 +5,7 @@ import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import superfundLogo from "../../public/superfund_logo.jpg"; // Adjust the path if needed
 import { client } from "../utils/client"; // Adjust the path if needed
 import VaultsContainer from "../containers/VaultsContainer"; // Adjust the path if needed
+import BuyContainer from "../containers/BuyContainer"; // Adjust the path if needed
 import Image from "next/image";
 
 // Set the root element where your app is rendered
@@ -13,7 +14,7 @@ import Image from "next/image";
 
 export default function Page() {
   const account = useActiveAccount();
-  const [activeSection, setActiveSection] = useState<"vaults" | "clients">(
+  const [activeSection, setActiveSection] = useState<"vaults" | "buy">(
     "vaults"
   );
 
@@ -35,6 +36,14 @@ export default function Page() {
             >
               Vaults
             </li>
+            <li
+              className={`cursor-pointer ${
+                activeSection === "buy" ? "font-bold" : ""
+              }`}
+              onClick={() => setActiveSection("buy")}
+            >
+              Buy Crypto
+            </li>
           </ul>
         </nav>
       )}
@@ -55,6 +64,7 @@ export default function Page() {
           {account ? (
             <>
               {activeSection === "vaults" && <VaultsContainer />}
+              {activeSection === "buy" && <BuyContainer/>}
             </>
           ) : (
             <ConnectButton
