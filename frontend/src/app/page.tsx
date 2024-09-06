@@ -7,10 +7,20 @@ import { client } from "../utils/client"; // Adjust the path if needed
 import VaultsContainer from "../containers/VaultsContainer"; // Adjust the path if needed
 import BuyContainer from "../containers/BuyContainer"; // Adjust the path if needed
 import Image from "next/image";
+import { inAppWallet } from "thirdweb/wallets";
+import { arbitrum } from "thirdweb/chains";
 
 // Set the root element where your app is rendered
 // In Next.js, you might not need this as Next.js manages the root element
 // Modal.setAppElement("#__next"); // "__next" is the default root element in Next.js
+
+const wallets = [
+  inAppWallet({
+    auth: {
+      options: ["google", "email", "passkey"],
+    },
+  }),
+];
 
 export default function Page() {
   const account = useActiveAccount();
@@ -54,9 +64,11 @@ export default function Page() {
             <div className="absolute top-0 right-0 transform translate-x-[+10%] translate-y-[-90%]">
               <ConnectButton
                 client={client}
-                appMetadata={{
-                  name: "Example app",
-                  url: "https://example.com",
+                wallets={wallets}
+                connectModal={{ size: "compact" }}
+                accountAbstraction={{
+                  chain: arbitrum, // replace with the chain you want
+                  sponsorGas: true,
                 }}
               />
             </div>
@@ -69,9 +81,11 @@ export default function Page() {
           ) : (
             <ConnectButton
               client={client}
-              appMetadata={{
-                name: "Example app",
-                url: "https://example.com",
+              wallets={wallets}
+              connectModal={{ size: "compact" }}
+              accountAbstraction={{
+                chain: arbitrum, // replace with the chain you want
+                sponsorGas: true,
               }}
             />
           )}

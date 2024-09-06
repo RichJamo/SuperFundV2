@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Vault } from "../types/types";
 import { Address } from "thirdweb";
-import Modal from "./DepositModal";
+import DepositModal from "./DepositModal";
 
 interface VaultsViewProps {
   loading: boolean;
@@ -120,15 +120,21 @@ const VaultsView: React.FC<VaultsViewProps> = ({
       )}
 
       {/* Modal Component */}
-      <Modal
+      <DepositModal
         isOpen={isModalOpen}
         closeModal={() => setModalOpen(false)}
         title={modalTitle}
-        balance="1000 USDC" // Replace with the actual balance of the user
+        balance="1000 USDC" // Replace with actual balance
         transactionAmount={transactionAmount}
         setTransactionAmount={setTransactionAmount}
-        handleTransaction={handleTransaction}
+        handleTransaction={() =>
+          selectedVault
+            ? depositTransaction(selectedVault.id as Address).then(() => setModalOpen(false))
+            : null
+        }
       />
+
+
     </div>
   );
 };

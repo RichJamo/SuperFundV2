@@ -1,37 +1,15 @@
 import { Address, getContract, prepareContractCall, sendTransaction } from "thirdweb";
 import { client } from "../utils/client";
-import { optimism } from "thirdweb/chains";
-import { USDC_CONTRACT_ADDRESS} from "../constants";
-import { Account, smartWallet } from "thirdweb/wallets";
+import { arbitrum } from "thirdweb/chains";
+import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { sendBatchTransaction, readContract } from "thirdweb";
 
-const connectClientSmartAccount = async (EOAaccount: Account, ClientSmartAccountAddress: Address) => {
-  const wallet = smartWallet({
-    chain: optimism,
-    sponsorGas: true,
-    overrides: {
-      accountAddress: ClientSmartAccountAddress
-    }
-  });
-  if (!EOAaccount) {
-    throw new Error("No active EOAaccount found");
-  }
-  await wallet.connect({
-    client: client,
-    personalAccount: EOAaccount
-  });
-  let smartAccount = wallet.getAccount();
-  if (!smartAccount) {
-    throw new Error("No smart account found");
-  }
-  return smartAccount;
-}
-
-export const executeDeposit = async (vaultId: Address, EOAaccount: Account, transactionAmount: bigint, clientSmartAccountAddress: Address) => {
+export const executeDeposit = async (vaultId: Address, activeAccount: Account, transactionAmount: bigint) => {
   let contract = getContract({
     client,
-    chain: optimism,
+    chain: arbitrum,
     address: vaultId
   });
   const poolAddress = await readContract({
@@ -40,8 +18,8 @@ export const executeDeposit = async (vaultId: Address, EOAaccount: Account, tran
   });
   contract = getContract({
     client,
-    chain: optimism,
-    address: USDC_CONTRACT_ADDRESS
+    chain: arbitrum,
+    address: ARBITRUM_USDC_CONTRACT_ADDRESS
   });
   const approveTx = prepareContractCall({
     contract,
@@ -50,30 +28,26 @@ export const executeDeposit = async (vaultId: Address, EOAaccount: Account, tran
   });
   contract = getContract({
     client,
-    chain: optimism,
+    chain: arbitrum,
     address: poolAddress
   });
   const supplyTx = prepareContractCall({
     contract,
     method:
       "function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)",
-    params: [USDC_CONTRACT_ADDRESS, transactionAmount, clientSmartAccountAddress, 0] // use a referral code?
+    params: [ARBITRUM_USDC_CONTRACT_ADDRESS, transactionAmount, activeAccount?.address, 0] // use a referral code?
   });
-  const smartAccount = await connectClientSmartAccount(EOAaccount, clientSmartAccountAddress);
-  if (!smartAccount) {
-    throw new Error("No smart account found");
-  }
   await sendBatchTransaction({
-    account: smartAccount,
+    account: activeAccount,
     transactions: [approveTx, supplyTx]
   });
   alert("Transaction confirmed");
 };
 
-export const executeWithdrawal = async (vaultId: Address, EOAaccount: Account, withdrawAmount: bigint, clientSmartAccountAddress: Address) => { //vaultId: string
+export const executeWithdrawal = async (vaultId: Address, activeAccount: Account, withdrawAmount: bigint) => { //vaultId: string
   let contract = getContract({
     client,
-    chain: optimism,
+    chain: arbitrum,
     address: vaultId
   });
   const poolAddress = await readContract({
@@ -82,22 +56,17 @@ export const executeWithdrawal = async (vaultId: Address, EOAaccount: Account, w
   });
   contract = getContract({
     client,
-    chain: optimism,
+    chain: arbitrum,
     address: poolAddress
   });
   const withdrawTx = prepareContractCall({
     contract,
     method:
       "function withdraw(address asset, uint256 amount, address to)",
-    params: [USDC_CONTRACT_ADDRESS, BigInt(withdrawAmount), clientSmartAccountAddress]
+    params: [ARBITRUM_USDC_CONTRACT_ADDRESS, BigInt(withdrawAmount), activeAccount?.address]
   });
-  
-  let smartAccount = await connectClientSmartAccount(EOAaccount, clientSmartAccountAddress);
-  if (!smartAccount) {
-    throw new Error("No smart account found");
-  }
   await sendTransaction({
-    account: smartAccount,
+    account: activeAccount,
     transaction: withdrawTx
   });
   alert("Transaction confirmed");
@@ -106,7 +75,7 @@ export const executeWithdrawal = async (vaultId: Address, EOAaccount: Account, w
 export const fetchUserVaultBalance = async (clientSmartAccountAddress: Address, vaultAddress: Address) => {
   const contract = getContract({
     client,
-    chain: optimism,
+    chain: arbitrum,
     address: vaultAddress
   });
   const balance = await getBalance({

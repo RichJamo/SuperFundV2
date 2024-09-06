@@ -4,7 +4,7 @@ import { formatTotalAssets } from "../utils/utils";
 import {
   executeDeposit,
   executeWithdrawal,
-  // fetchUserVaultBalance,
+  fetchUserVaultBalance,
 } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { FormattedVault, VaultData } from "../types/types";
@@ -12,6 +12,7 @@ import { VAULT_IDS } from "../constants/index";
 import { Address } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
+// import { updateUserVaultBalances } from "../actions/actions";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -32,41 +33,33 @@ const VaultsContainer = () => {
   }
 
   const handleDepositTransaction = async (vaultId: Address) => {
-    if (!selectedUsername || !userMap[selectedUsername]?.walletAddress) {
-      console.error("No wallet address available for approval");
-      return;
-    }
     try {
       setTransactionAmount;
       await executeDeposit(
         vaultId,
         EOAaccount,
         BigInt(transactionAmount),
-        userMap[selectedUsername].walletAddress as Address
       );
-      refetch();
-      updateUserVaultBalances();
+      // refetch();
+      // updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
     }
   };
 
   const handleWithdrawTransaction = async (vaultId: Address) => {
-    if (!selectedUsername || !userMap[selectedUsername]?.walletAddress) {
-      console.error("No wallet address available for approval");
-      return;
-    }
-
     try {
       setTransactionAmount;
+      console.log("vaultId", vaultId);
+      console.log("EOAaccount", EOAaccount);
+      console.log("transactionAmount", BigInt(transactionAmount));
       await executeWithdrawal(
         vaultId,
         EOAaccount,
         BigInt(transactionAmount),
-        userMap[selectedUsername].walletAddress as Address
       );
-      refetch();
-      updateUserVaultBalances();
+      // refetch();
+      // updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
     }
@@ -92,7 +85,7 @@ const VaultsContainer = () => {
             id,
             name: name || "Unnamed Vault",
             symbol: inputToken.symbol || "N/A",
-            chain: "Optimism",
+            chain: "Arbitrum",
             protocol: "Aave",
             totalAssets: totalValueLockedUSD
               ? formatTotalAssets(totalValueLockedUSD, inputToken.decimals)
@@ -124,9 +117,9 @@ const VaultsContainer = () => {
     }
   }, [activeAccount]);
 
-  // useEffect(() => {
-  //   updateUserVaultBalances();
-  // }, [selectedUsername, userMap]);
+  useEffect(() => {
+    // updateUserVaultBalances();
+  }, [vaults]);
 
   const handleUserChange = (username: string) => {
   };
