@@ -4,7 +4,7 @@ import { formatTotalAssets } from "../utils/utils";
 import {
   executeDeposit,
   executeWithdrawal,
-  // fetchUserVaultBalance,
+  fetchUserVaultBalance,
 } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { FormattedVault, VaultData } from "../types/types";
@@ -31,20 +31,38 @@ const VaultsContainer = () => {
     throw new Error("No active account found");
   }
 
+  async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {
+    // Create a new array with updated vault balances
+    const updatedVaults = await Promise.all(
+      formattedVaults.map(async (vault) => {
+        try {
+          const balance = await fetchUserVaultBalance(
+            activeAccount?.address as Address,
+            vault.id as Address
+          );
+          console.log("balance", balance);
+          return { ...vault, userBalance: balance }; // Return updated vault
+        } catch (error) {
+          console.error(`Error fetching balance for vault ${vault.id}:`, error);
+          return { ...vault, userBalance: "Error" }; // Handle error
+        }
+      })
+    );
+  
+    // Update the state with the new array
+    setVaults(updatedVaults);
+  }
+  
+
   const handleDepositTransaction = async (vaultId: Address) => {
-    if (!selectedUsername || !userMap[selectedUsername]?.walletAddress) {
-      console.error("No wallet address available for approval");
-      return;
-    }
     try {
       setTransactionAmount;
       await executeDeposit(
         vaultId,
         EOAaccount,
         BigInt(transactionAmount),
-        userMap[selectedUsername].walletAddress as Address
       );
-      refetch();
+      // refetch();
       updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
@@ -52,20 +70,17 @@ const VaultsContainer = () => {
   };
 
   const handleWithdrawTransaction = async (vaultId: Address) => {
-    if (!selectedUsername || !userMap[selectedUsername]?.walletAddress) {
-      console.error("No wallet address available for approval");
-      return;
-    }
-
     try {
       setTransactionAmount;
+      console.log("vaultId", vaultId);
+      console.log("EOAaccount", EOAaccount);
+      console.log("transactionAmount", BigInt(transactionAmount));
       await executeWithdrawal(
         vaultId,
         EOAaccount,
         BigInt(transactionAmount),
-        userMap[selectedUsername].walletAddress as Address
       );
-      refetch();
+      // refetch();
       updateUserVaultBalances();
     } catch (error) {
       throw new Error("Transaction failed");
@@ -76,23 +91,23 @@ const VaultsContainer = () => {
     async function init() {
       try {
         const data: VaultData[] = await fetchVaultData(VAULT_IDS);
-
+  
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
           const { id, inputToken, name, rates, totalValueLockedUSD } =
             vaultData;
-
+  
           const lenderVariableRate = rates.find(
             (rate) => rate.type === "VARIABLE" && rate.id.startsWith("LENDER")
           );
           const borrowerVariableRate = rates.find(
             (rate) => rate.type === "VARIABLE" && rate.id.startsWith("BORROWER")
           );
-
+  
           return {
             id,
             name: name || "Unnamed Vault",
             symbol: inputToken.symbol || "N/A",
-            chain: "Optimism",
+            chain: "Arbitrum",
             protocol: "Aave",
             totalAssets: totalValueLockedUSD
               ? formatTotalAssets(totalValueLockedUSD, inputToken.decimals)
@@ -109,10 +124,12 @@ const VaultsContainer = () => {
             userBalance: "N/A",
           };
         });
-
+  
         setVaults(formattedVaults);
-
-        
+  
+        // Fetch user balances after setting the vaults
+        await updateUserVaultBalances(formattedVaults);
+        console.log("formattedVaults", formattedVaults);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
@@ -123,10 +140,7 @@ const VaultsContainer = () => {
       init();
     }
   }, [activeAccount]);
-
-  // useEffect(() => {
-  //   updateUserVaultBalances();
-  // }, [selectedUsername, userMap]);
+  
 
   const handleUserChange = (username: string) => {
   };

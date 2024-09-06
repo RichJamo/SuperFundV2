@@ -1,7 +1,7 @@
-import React from "react";
-import { TransactionButton } from "thirdweb/react";
+import React, { useState } from "react";
 import { Vault } from "../types/types";
 import { Address } from "thirdweb";
+import DepositModal from "./DepositModal";
 
 import { PayEmbed } from "thirdweb/react";
 import { client } from "@/utils/client";
@@ -15,6 +15,8 @@ interface VaultsViewProps {
   withdrawTransaction: (value: Address) => Promise<any>;
 }
 
+
+
 const VaultsView: React.FC<VaultsViewProps> = ({
   loading,
   vaults,
@@ -23,12 +25,39 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   depositTransaction,
   withdrawTransaction,
 }) => {
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+
+  const handleDepositClick = (vault: Vault) => {
+    setModalTitle("Deposit");
+    setSelectedVault(vault);
+    setModalOpen(true);
+  };
+
+  const handleWithdrawClick = (vault: Vault) => {
+    setModalTitle("Withdraw");
+    setSelectedVault(vault);
+    setModalOpen(true);
+  };
+
+  const handleTransaction = async () => {
+    if (selectedVault) {
+      if (modalTitle === "Deposit") {
+        await depositTransaction(selectedVault.id as Address);
+      } else if (modalTitle === "Withdraw") {
+        await withdrawTransaction(selectedVault.id as Address);
+      }
+      setModalOpen(false);
+    }
+  };
+
   return (
     <div>
       {loading ? (
         <p>Loading...</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mt-10">
           <table className="min-w-full bg-black text-zinc-100">
             <thead className="bg-gray-800">
               <tr>
@@ -72,27 +101,18 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
-                      {/* <TransactionButton
-                        transaction={() =>
-                          depositTransaction(vault.id as Address)
-                        }
-                      >
-                        Deposit
-                      </TransactionButton> */}
-
                       <button
-                        className="w-[165px] rounded-md text-black bg-white"
-                        onClick={() => <PayEmbed client={client} />}
+                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                        onClick={() => handleDepositClick(vault)}
                       >
                         Deposit
                       </button>
-                      <TransactionButton
-                        transaction={() =>
-                          withdrawTransaction(vault.id as Address)
-                        }
+                      <button
+                        className="px-4 py-2 bg-blue-600 text-white rounded"
+                        onClick={() => handleWithdrawClick(vault)}
                       >
                         Withdraw
-                      </TransactionButton>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -101,19 +121,23 @@ const VaultsView: React.FC<VaultsViewProps> = ({
           </table>
         </div>
       )}
-      {
-        <div className="mt-4">
-          <h2 className="text-xl font-bold mb-4 text-zinc-100">
-            Amount to Deposit/Withdraw
-          </h2>
-          <input
-            type="number"
-            value={transactionAmount}
-            onChange={(e) => setTransactionAmount(e.target.value)}
-            className="px-4 py-2 border border-gray-00 rounded mb-2 text-gray-900"
-          />
-        </div>
-      }
+
+      {/* Modal Component */}
+      <DepositModal
+        isOpen={isModalOpen}
+        closeModal={() => setModalOpen(false)}
+        title={modalTitle}
+        balance="1000 USDC" // Replace with actual balance
+        transactionAmount={transactionAmount}
+        setTransactionAmount={setTransactionAmount}
+        handleTransaction={() =>
+          selectedVault
+            ? depositTransaction(selectedVault.id as Address).then(() => setModalOpen(false))
+            : null
+        }
+      />
+
+
     </div>
   );
 };

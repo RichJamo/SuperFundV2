@@ -1,11 +1,11 @@
-import { AAVE_OPTIMISM_SUBGRAPH_URL } from "../constants/urls";
+import { AAVE_ARBITRUM_SUBGRAPH_URL } from "../constants/urls";
 
 export const fetchVaultData = async (vaultIds: string[]): Promise<any> => {
   const vaultIdsString = vaultIds.map(id => `"${id.toLowerCase()}"`).join(",");
 
   try {
     const response = await fetch(
-      AAVE_OPTIMISM_SUBGRAPH_URL,
+      AAVE_ARBITRUM_SUBGRAPH_URL,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
