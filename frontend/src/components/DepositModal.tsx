@@ -37,7 +37,7 @@ const DepositModal: React.FC<{
               USDC
             </button>
             <p className="text-sm text-black font-light mt-1">
-              You have 0.00 USDC
+              You have {Number(usdcBalance).toFixed(2)} USDC
             </p>
           </div>
 
