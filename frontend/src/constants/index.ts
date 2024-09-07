@@ -9,7 +9,7 @@ export const PERMIT2_CONTRACT_ADDRESS = '0x000000000022D473030F116dDEE9F6B43aC78
 
 export const VAULT_IDS = [
   // "0x794a61358D6845594F94dc1DB02A252b5b4814aD", // what I originally had for the AAVE USDC pool
-  "0x625e7708f30ca75bfd92586e17077590c60eb4cd", // what I got from the subgraph (this is the AToken)
+  "0x724dc807b04555b71ed48a6896b6F41593b8C637", // what I got from the subgraph (this is the AToken)
   // "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5"
 ];
 // Other constants can be added here

@@ -10,6 +10,7 @@ interface VaultsViewProps {
   setTransactionAmount: (value: string) => void;
   depositTransaction: (value: Address) => Promise<any>;
   withdrawTransaction: (value: Address) => Promise<any>;
+  usdcBalance: string;
 }
 
 
@@ -21,6 +22,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   setTransactionAmount,
   depositTransaction,
   withdrawTransaction,
+  usdcBalance
 }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -121,18 +123,19 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 
       {/* Modal Component */}
       <DepositModal
-        isOpen={isModalOpen}
-        closeModal={() => setModalOpen(false)}
-        title={modalTitle}
-        balance="1000 USDC" // Replace with actual balance
-        transactionAmount={transactionAmount}
-        setTransactionAmount={setTransactionAmount}
-        handleTransaction={() =>
-          selectedVault
-            ? depositTransaction(selectedVault.id as Address).then(() => setModalOpen(false))
-            : null
-        }
-      />
+  isOpen={isModalOpen}
+  closeModal={() => setModalOpen(false)}
+  title={modalTitle}
+  transactionAmount={transactionAmount}
+  setTransactionAmount={setTransactionAmount}
+  handleTransaction={() =>
+    selectedVault
+      ? depositTransaction(selectedVault.id as Address).then(() => setModalOpen(false))
+      : null
+  }
+  usdcBalance={usdcBalance}
+/>
+
 
 
     </div>
