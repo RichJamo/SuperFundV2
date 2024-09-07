@@ -21,7 +21,7 @@ import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
-  const [transactionAmount, setTransactionAmount] = useState("");
+  const [transactionAmount, setTransactionAmount] = useState("1");
   const [loading, setLoading] = useState<boolean>(true);
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
 

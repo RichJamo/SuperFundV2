@@ -3,9 +3,6 @@ import { Vault } from "../types/types";
 import { Address } from "thirdweb";
 import DepositModal from "./DepositModal";
 
-import { PayEmbed } from "thirdweb/react";
-import { client } from "@/utils/client";
-
 interface VaultsViewProps {
   loading: boolean;
   vaults: Vault[];
@@ -16,8 +13,6 @@ interface VaultsViewProps {
   usdcBalance: string;
 }
 
-
-
 const VaultsView: React.FC<VaultsViewProps> = ({
   loading,
   vaults,
@@ -25,7 +20,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   setTransactionAmount,
   depositTransaction,
   withdrawTransaction,
-  usdcBalance
+  usdcBalance,
 }) => {
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
@@ -126,21 +121,20 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 
       {/* Modal Component */}
       <DepositModal
-  isOpen={isModalOpen}
-  closeModal={() => setModalOpen(false)}
-  title={modalTitle}
-  transactionAmount={transactionAmount}
-  setTransactionAmount={setTransactionAmount}
-  handleTransaction={() =>
-    selectedVault
-      ? depositTransaction(selectedVault.id as Address).then(() => setModalOpen(false))
-      : null
-  }
-  usdcBalance={usdcBalance}
-/>
-
-
-
+        isOpen={isModalOpen}
+        closeModal={() => setModalOpen(false)}
+        title={modalTitle}
+        transactionAmount={transactionAmount}
+        setTransactionAmount={setTransactionAmount}
+        handleTransaction={() =>
+          selectedVault
+            ? depositTransaction(selectedVault.id as Address).then(() =>
+                setModalOpen(false)
+              )
+            : null
+        }
+        usdcBalance={usdcBalance}
+      />
     </div>
   );
 };

@@ -13,7 +13,7 @@ const DepositModal: React.FC<{
   transactionAmount,
   setTransactionAmount,
   handleTransaction,
-  usdcBalance
+  usdcBalance,
 }) => {
   if (!isOpen) return null;
 
@@ -25,22 +25,51 @@ const DepositModal: React.FC<{
 
         {/* Balance info */}
         <p className="text-center text-gray-600 mb-4">
-          Your USDC balance: <span className="font-bold">{usdcBalance || "N/A"}</span>
+          Your USDC balance:{" "}
+          <span className="font-bold">{usdcBalance || "N/A"}</span>
         </p>
 
         {/* Input for deposit/withdraw amount */}
-        <input
-          type="number"
-          value={transactionAmount}
-          onChange={(e) => setTransactionAmount(e.target.value)}
-          className="w-full px-5 py-3 border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 mb-6"
-          placeholder="Enter amount"
-        />
+        <div className="flex gap-4">
+          <div className="flex flex-col flex-1">
+            <p className="font-normal text-gray-500">From Wallet</p>
+            <button className="bg-gray-400 rounded-lg p-2 text-left">
+              USDC
+            </button>
+            <p className="text-sm text-black font-light mt-1">
+              You have 0.00 USDC
+            </p>
+          </div>
+
+          <div className="flex flex-col flex-1">
+            <p className="font-normal text-gray-500">Amount</p>
+            <div className="flex border border-gray-300 rounded-lg p-1">
+              <input
+                type="number"
+                value={transactionAmount}
+                onChange={(e) => setTransactionAmount(e.target.value)}
+                className="w-full px-2 text-gray-800 focus:outline-none bg-transparent"
+              />
+              <button
+                className="bg-gray-400 h-fit p-1 rounded-md text-black"
+                onClick={() => setTransactionAmount(usdcBalance)}
+              >
+                Max
+              </button>
+            </div>
+            <p className="text-sm text-black font-light mt-1">
+              ${Number(transactionAmount).toFixed(2)}
+            </p>
+          </div>
+        </div>
 
         {/* Buttons */}
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-end space-x-4 mt-8">
           <button
-            onClick={closeModal}
+            onClick={() => {
+              setTransactionAmount("1");
+              closeModal();
+            }}
             className="px-5 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium"
           >
             Cancel
