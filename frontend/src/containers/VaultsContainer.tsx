@@ -12,6 +12,12 @@ import { VAULT_IDS } from "../constants/index";
 import { Address } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
+import { useReadContract } from "thirdweb/react";
+import { getBalance } from "thirdweb/extensions/erc20";
+import { getContract } from "thirdweb";
+import { client } from "../utils/client";
+import { arbitrum } from "thirdweb/chains";
+import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -31,6 +37,12 @@ const VaultsContainer = () => {
     throw new Error("No active account found");
   }
 
+  const contract = getContract({
+    client,
+    chain: arbitrum,
+    address: ARBITRUM_USDC_CONTRACT_ADDRESS,
+  });
+
   async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {
     // Create a new array with updated vault balances
     const updatedVaults = await Promise.all(
@@ -40,7 +52,6 @@ const VaultsContainer = () => {
             activeAccount?.address as Address,
             vault.id as Address
           );
-          console.log("balance", balance);
           return { ...vault, userBalance: balance }; // Return updated vault
         } catch (error) {
           console.error(`Error fetching balance for vault ${vault.id}:`, error);
@@ -62,8 +73,8 @@ const VaultsContainer = () => {
         EOAaccount,
         BigInt(transactionAmount),
       );
-      // refetch();
-      updateUserVaultBalances();
+      refetch();
+      updateUserVaultBalances(vaults);
     } catch (error) {
       throw new Error("Transaction failed");
     }
@@ -72,22 +83,35 @@ const VaultsContainer = () => {
   const handleWithdrawTransaction = async (vaultId: Address) => {
     try {
       setTransactionAmount;
-      console.log("vaultId", vaultId);
-      console.log("EOAaccount", EOAaccount);
-      console.log("transactionAmount", BigInt(transactionAmount));
       await executeWithdrawal(
         vaultId,
         EOAaccount,
         BigInt(transactionAmount),
       );
-      // refetch();
-      updateUserVaultBalances();
+      refetch();
+      updateUserVaultBalances(vaults);
     } catch (error) {
       throw new Error("Transaction failed");
     }
   };
 
-  useEffect(() => {
+  const {
+    data: usdcBalanceResult,
+    isLoading,
+    error,
+    refetch,
+  } = useReadContract(getBalance, {
+    contract,
+    address: activeAccount?.address as Address,
+  });
+  
+  const usdcBalance = isLoading
+    ? "Loading..."
+    : error
+    ? "Error"
+    : usdcBalanceResult?.displayValue || "N/A";
+
+    useEffect(() => {
     async function init() {
       try {
         const data: VaultData[] = await fetchVaultData(VAULT_IDS);
@@ -129,7 +153,6 @@ const VaultsContainer = () => {
   
         // Fetch user balances after setting the vaults
         await updateUserVaultBalances(formattedVaults);
-        console.log("formattedVaults", formattedVaults);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
@@ -153,6 +176,7 @@ const VaultsContainer = () => {
       setTransactionAmount={setTransactionAmount}
       depositTransaction={handleDepositTransaction}
       withdrawTransaction={handleWithdrawTransaction}
+      usdcBalance={usdcBalance}
     />
   );
 };

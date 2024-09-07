@@ -2,18 +2,18 @@ const DepositModal: React.FC<{
   isOpen: boolean;
   closeModal: () => void;
   title: string;
-  balance: string;
   transactionAmount: string;
   setTransactionAmount: (value: string) => void;
   handleTransaction: () => void;
+  usdcBalance: string;
 }> = ({
   isOpen,
   closeModal,
   title,
-  balance,
   transactionAmount,
   setTransactionAmount,
   handleTransaction,
+  usdcBalance
 }) => {
   if (!isOpen) return null;
 
@@ -25,7 +25,7 @@ const DepositModal: React.FC<{
 
         {/* Balance info */}
         <p className="text-center text-gray-600 mb-4">
-          Your USDC balance: <span className="font-bold">{balance}</span>
+          Your USDC balance: <span className="font-bold">{usdcBalance || "N/A"}</span>
         </p>
 
         {/* Input for deposit/withdraw amount */}

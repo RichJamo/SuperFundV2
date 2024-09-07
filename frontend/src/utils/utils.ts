@@ -28,7 +28,6 @@ export const getWalletAddressOnceCreated = (
   updatePrevTransaction: (transaction: TransactionResult | null) => void
 ): string | null => {
   if (transactionResult && transactionResult !== prevTransaction) {
-    console.log(transactionResult);
     updatePrevTransaction(transactionResult);
     if (eventLog && eventLog.length > 0) {
       const latestEvent = eventLog[eventLog.length - 1];
