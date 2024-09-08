@@ -1,3 +1,5 @@
+import React from "react";
+
 const DepositModal: React.FC<{
   isOpen: boolean;
   closeModal: () => void;
@@ -6,6 +8,7 @@ const DepositModal: React.FC<{
   setTransactionAmount: (value: string) => void;
   handleTransaction: () => void;
   usdcBalance: string;
+  isProcessing: boolean;  // Add isProcessing prop
 }> = ({
   isOpen,
   closeModal,
@@ -14,6 +17,7 @@ const DepositModal: React.FC<{
   setTransactionAmount,
   handleTransaction,
   usdcBalance,
+  isProcessing,  // Use isProcessing prop
 }) => {
   if (!isOpen) return null;
 
@@ -33,9 +37,7 @@ const DepositModal: React.FC<{
         <div className="flex gap-4">
           <div className="flex flex-col flex-1">
             <p className="font-normal text-gray-500">From Wallet</p>
-            <button className="bg-gray-400 rounded-lg p-2 text-left">
-              USDC
-            </button>
+            <button className="bg-gray-400 rounded-lg p-2 text-left">USDC</button>
             <p className="text-sm text-black font-light mt-1">
               You have {Number(usdcBalance).toFixed(2)} USDC
             </p>
@@ -71,14 +73,20 @@ const DepositModal: React.FC<{
               closeModal();
             }}
             className="px-5 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium"
+            disabled={isProcessing}  // Disable while processing
           >
             Cancel
           </button>
           <button
             onClick={handleTransaction}
             className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
+            disabled={isProcessing}  // Disable while processing
           >
-            Confirm
+            {isProcessing ? (
+              <div className="spinner-border animate-spin border-2 rounded-full w-4 h-4 border-white border-t-transparent"></div>
+            ) : (
+              "Confirm"
+            )}
           </button>
         </div>
       </div>

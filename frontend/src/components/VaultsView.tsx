@@ -25,6 +25,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState("");
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDepositClick = (vault: Vault) => {
     setModalTitle("Deposit");
@@ -39,13 +40,21 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   };
 
   const handleTransaction = async () => {
-    if (selectedVault) {
+    if (!selectedVault) return;
+
+    setIsProcessing(true);  // Start processing state
+
+    try {
       if (modalTitle === "Deposit") {
         await depositTransaction(selectedVault.id as Address);
       } else if (modalTitle === "Withdraw") {
         await withdrawTransaction(selectedVault.id as Address);
       }
-      setModalOpen(false);
+    } catch (error) {
+      console.error("Transaction failed:", error);
+    } finally {
+      setIsProcessing(false);  // Stop processing state
+      setModalOpen(false);  // Close the modal after transaction
     }
   };
 
@@ -126,14 +135,9 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         title={modalTitle}
         transactionAmount={transactionAmount}
         setTransactionAmount={setTransactionAmount}
-        handleTransaction={() =>
-          selectedVault
-            ? depositTransaction(selectedVault.id as Address).then(() =>
-                setModalOpen(false)
-              )
-            : null
-        }
+        handleTransaction={handleTransaction}
         usdcBalance={usdcBalance}
+        isProcessing={isProcessing}  // Pass processing state to modal
       />
     </div>
   );

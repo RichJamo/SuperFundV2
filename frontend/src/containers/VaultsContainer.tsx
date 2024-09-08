@@ -68,11 +68,14 @@ const VaultsContainer = () => {
   const handleDepositTransaction = async (vaultId: Address) => {
     try {
       setTransactionAmount;
+      const value = Number(transactionAmount)
+      const scaledAmount = BigInt(value * 10**6)
       await executeDeposit(
         vaultId,
         EOAaccount,
-        BigInt(transactionAmount),
+        scaledAmount, //TODO make this general for all tokens?
       );
+      console.log("Transaction confirmed")
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
@@ -83,10 +86,12 @@ const VaultsContainer = () => {
   const handleWithdrawTransaction = async (vaultId: Address) => {
     try {
       setTransactionAmount;
+      const value = Number(transactionAmount)
+      const scaledAmount = BigInt(value * 10**6)
       await executeWithdrawal(
         vaultId,
         EOAaccount,
-        BigInt(transactionAmount),
+        scaledAmount,
       );
       refetch();
       updateUserVaultBalances(vaults);
