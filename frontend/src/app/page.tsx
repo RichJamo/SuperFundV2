@@ -9,6 +9,7 @@ import BuyContainer from "../containers/BuyContainer"; // Adjust the path if nee
 import Image from "next/image";
 import { inAppWallet } from "thirdweb/wallets";
 import { arbitrum } from "thirdweb/chains";
+import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "@/constants";
 
 // Set the root element where your app is rendered
 // In Next.js, you might not need this as Next.js manages the root element
@@ -65,10 +66,17 @@ export default function Page() {
               <ConnectButton
                 client={client}
                 wallets={wallets}
-                connectModal={{ size: "compact" }}
+                connectModal={{ 
+                  size: "compact" 
+                }}
                 accountAbstraction={{
-                  chain: arbitrum, // replace with the chain you want
+                  chain: arbitrum,
                   sponsorGas: true,
+                }}
+                detailsButton={{
+                  displayBalanceToken: {
+                    [arbitrum.id]: ARBITRUM_USDC_CONTRACT_ADDRESS,
+                  },
                 }}
               />
             </div>
