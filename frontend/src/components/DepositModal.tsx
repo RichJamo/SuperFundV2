@@ -27,12 +27,6 @@ const DepositModal: React.FC<{
         {/* Modal header */}
         <h2 className="text-2xl font-semibold mb-6 text-center">{title}</h2>
 
-        {/* Balance info */}
-        <p className="text-center text-gray-600 mb-4">
-          Your USDC balance:{" "}
-          <span className="font-bold">{usdcBalance || "N/A"}</span>
-        </p>
-
         {/* Input for deposit/withdraw amount */}
         <div className="flex gap-4">
           <div className="flex flex-col flex-1">
