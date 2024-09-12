@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Vault } from "../types/types";
 import { Address } from "thirdweb";
 import DepositModal from "./DepositModal";
+import WithdrawModal from "./WithdrawModal";
 
 interface VaultsViewProps {
   loading: boolean;
@@ -22,39 +23,48 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   withdrawTransaction,
   usdcBalance,
 }) => {
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
+  const [isDepositModalOpen, setDepositModalOpen] = useState(false);
+  const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDepositClick = (vault: Vault) => {
-    setModalTitle("Deposit");
     setSelectedVault(vault);
-    setModalOpen(true);
+    setDepositModalOpen(true);
   };
 
   const handleWithdrawClick = (vault: Vault) => {
-    setModalTitle("Withdraw");
     setSelectedVault(vault);
-    setModalOpen(true);
+    setWithdrawModalOpen(true);
   };
 
-  const handleTransaction = async () => {
+  const handleDeposit = async () => {
     if (!selectedVault) return;
 
     setIsProcessing(true);  // Start processing state
 
     try {
-      if (modalTitle === "Deposit") {
-        await depositTransaction(selectedVault.id as Address);
-      } else if (modalTitle === "Withdraw") {
-        await withdrawTransaction(selectedVault.id as Address);
-      }
+      await depositTransaction(selectedVault.id as Address);
     } catch (error) {
       console.error("Transaction failed:", error);
     } finally {
       setIsProcessing(false);  // Stop processing state
-      setModalOpen(false);  // Close the modal after transaction
+      setDepositModalOpen(false);  // Close the modal after transaction
+    }
+  };
+
+  const handleWithdraw = async () => {
+    if (!selectedVault) return;
+
+    setIsProcessing(true);  // Start processing state
+
+    try {
+      await withdrawTransaction(selectedVault.id as Address);
+    } catch (error) {
+      console.error("Transaction failed:", error);
+    } finally {
+      setIsProcessing(false);  // Stop processing state
+      setWithdrawModalOpen(false);  // Close the modal after transaction
     }
   };
 
@@ -130,12 +140,20 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 
       {/* Modal Component */}
       <DepositModal
-        isOpen={isModalOpen}
-        closeModal={() => setModalOpen(false)}
-        title={modalTitle}
+        isOpen={isDepositModalOpen}
+        closeModal={() => setDepositModalOpen(false)}
         transactionAmount={transactionAmount}
         setTransactionAmount={setTransactionAmount}
-        handleTransaction={handleTransaction}
+        handleDeposit={handleDeposit}
+        usdcBalance={usdcBalance}
+        isProcessing={isProcessing}  // Pass processing state to modal
+      />
+      <WithdrawModal
+        isOpen={isWithdrawModalOpen}
+        closeModal={() => setWithdrawModalOpen(false)}
+        transactionAmount={transactionAmount}
+        setTransactionAmount={setTransactionAmount}
+        handleWithdraw={handleWithdraw}
         usdcBalance={usdcBalance}
         isProcessing={isProcessing}  // Pass processing state to modal
       />

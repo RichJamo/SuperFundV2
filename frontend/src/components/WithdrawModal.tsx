@@ -1,11 +1,11 @@
 import React from "react";
 
-const DepositModal: React.FC<{
+const WithdrawModal: React.FC<{
   isOpen: boolean;
   closeModal: () => void;
   transactionAmount: string;
   setTransactionAmount: (value: string) => void;
-  handleDeposit: () => void;
+  handleWithdraw: () => void;
   usdcBalance: string;
   isProcessing: boolean;  // Add isProcessing prop
 }> = ({
@@ -13,7 +13,7 @@ const DepositModal: React.FC<{
   closeModal,
   transactionAmount,
   setTransactionAmount,
-  handleDeposit,
+  handleWithdraw,
   usdcBalance,
   isProcessing,  // Use isProcessing prop
 }) => {
@@ -23,7 +23,7 @@ const DepositModal: React.FC<{
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-lg">
         {/* Modal header */}
-        <h2 className="text-2xl font-semibold mb-6 text-center">Deposit</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-center">Withdraw</h2>
 
         {/* Input for deposit/withdraw amount */}
         <div className="flex gap-4">
@@ -70,7 +70,7 @@ const DepositModal: React.FC<{
             Cancel
           </button>
           <button
-            onClick={handleDeposit}
+            onClick={handleWithdraw}
             className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
             disabled={isProcessing}  // Disable while processing
           >
@@ -86,4 +86,4 @@ const DepositModal: React.FC<{
   );
 };
 
-export default DepositModal;
+export default WithdrawModal;
