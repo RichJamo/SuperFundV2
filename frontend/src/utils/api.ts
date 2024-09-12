@@ -15,7 +15,15 @@ export const fetchVaultData = async (vaultIds: string[]): Promise<any> => {
               markets(where: {id_in: [${vaultIdsString}]}) {
                 id
                 name
+                protocol {
+                  name
+                  network
+                }
                 inputToken {
+                  symbol
+                  decimals
+                }
+                outputToken {
                   symbol
                   decimals
                 }

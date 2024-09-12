@@ -6,18 +6,24 @@ const WithdrawModal: React.FC<{
   transactionAmount: string;
   setTransactionAmount: (value: string) => void;
   handleWithdraw: () => void;
-  usdcBalance: string;
-  isProcessing: boolean;  // Add isProcessing prop
+  vaultBalance: string | undefined;
+  vaultTokenSymbol: string | undefined;
+  isProcessing: boolean;
 }> = ({
   isOpen,
   closeModal,
   transactionAmount,
   setTransactionAmount,
   handleWithdraw,
-  usdcBalance,
-  isProcessing,  // Use isProcessing prop
+  vaultBalance,
+  vaultTokenSymbol,
+  isProcessing,
 }) => {
   if (!isOpen) return null;
+
+  const isAmountValid =
+  Number(transactionAmount) > 0 &&
+  Number(transactionAmount) <= Number(vaultBalance);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -29,9 +35,9 @@ const WithdrawModal: React.FC<{
         <div className="flex gap-4">
           <div className="flex flex-col flex-1">
             <p className="font-normal text-gray-500">From Wallet</p>
-            <button className="bg-gray-400 rounded-lg p-2 text-left">USDC</button>
+            <button className="bg-gray-400 rounded-lg p-2 text-left">{vaultTokenSymbol}</button>
             <p className="text-sm text-black font-light mt-1">
-              You have {Number(usdcBalance).toFixed(2)} USDC
+              You have {Number(vaultBalance).toFixed(2)} {vaultTokenSymbol}
             </p>
           </div>
 
@@ -46,14 +52,17 @@ const WithdrawModal: React.FC<{
               />
               <button
                 className="bg-gray-400 h-fit p-1 rounded-md text-black"
-                onClick={() => setTransactionAmount(usdcBalance)}
+                onClick={() => setTransactionAmount(vaultBalance || "0")}
               >
                 Max
               </button>
             </div>
             <p className="text-sm text-black font-light mt-1">
-              ${Number(transactionAmount).toFixed(2)}
+              {Number(transactionAmount).toFixed(2)} {vaultTokenSymbol}
             </p>
+            {!isAmountValid && (
+              <p className="text-sm text-red-500 mt-1">Insufficient {vaultTokenSymbol} balance</p>
+            )}
           </div>
         </div>
 
@@ -72,7 +81,7 @@ const WithdrawModal: React.FC<{
           <button
             onClick={handleWithdraw}
             className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
-            disabled={isProcessing}  // Disable while processing
+            disabled={isProcessing || !isAmountValid}  // Disable if invalid amount
           >
             {isProcessing ? (
               <div className="spinner-border animate-spin border-2 rounded-full w-4 h-4 border-white border-t-transparent"></div>

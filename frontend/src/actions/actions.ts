@@ -5,8 +5,6 @@ import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { sendBatchTransaction, readContract } from "thirdweb";
-import { ToastContainer, toast } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
 
 export const executeDeposit = async (vaultId: Address, activeAccount: Account, transactionAmount: bigint) => {
   let contract = getContract({
@@ -43,10 +41,6 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
     account: activeAccount,
     transactions: [approveTx, supplyTx]
   });
-  toast.success("Transaction confirmed", {
-    position: "top-right",
-    autoClose: 3000, // 3 seconds
-  });
 };
 
 export const executeWithdrawal = async (vaultId: Address, activeAccount: Account, withdrawAmount: bigint) => { //vaultId: string
@@ -73,10 +67,6 @@ export const executeWithdrawal = async (vaultId: Address, activeAccount: Account
   await sendTransaction({
     account: activeAccount,
     transaction: withdrawTx
-  });
-  toast.success("Transaction confirmed", {
-    position: "top-right",
-    autoClose: 3000, // 3 seconds
   });
 };
 

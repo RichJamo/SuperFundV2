@@ -12,13 +12,28 @@ const BuyView: React.FC = ({}) => {
       <PayEmbed 
       client={client} 
       payOptions={{
-        buyWithFiat: false,
+        buyWithCrypto: {
+          prefillSource: {
+            allowEdits: {
+              chain: false,
+              token: false,
+            },
+            chain: arbitrum,
+            token: {
+              address: ARBITRUM_USDC_CONTRACT_ADDRESS,
+              name: "Arbitrum USDC",
+              symbol: "USDC",
+            }
+          }
+        },
+        buyWithFiat: 
+        {
+        },
         prefillBuy: {
           token: {
             address: ARBITRUM_USDC_CONTRACT_ADDRESS,
             name: "Arbitrum USDC",
             symbol: "USDC",
-            // icon: "...", // optional
           },
           chain: arbitrum,
           allowEdits: {

@@ -113,7 +113,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">{vault.apy7d}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {vault.userBalance || "N/A"}
+                  {Number(vault.userBalance) > 0 ? `${Number(vault.userBalance).toFixed(2)} ${vault.symbol}` : "N/A"}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
@@ -154,7 +154,8 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         transactionAmount={transactionAmount}
         setTransactionAmount={setTransactionAmount}
         handleWithdraw={handleWithdraw}
-        usdcBalance={usdcBalance}
+        vaultBalance={selectedVault ? selectedVault.userBalance : "0"}
+        vaultTokenSymbol={selectedVault ? selectedVault.symbol : ""}
         isProcessing={isProcessing}  // Pass processing state to modal
       />
     </div>

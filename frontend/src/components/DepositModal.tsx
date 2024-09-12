@@ -19,6 +19,10 @@ const DepositModal: React.FC<{
 }) => {
   if (!isOpen) return null;
 
+  const isAmountValid =
+    Number(transactionAmount) > 0 &&
+    Number(transactionAmount) <= Number(usdcBalance);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-lg">
@@ -54,6 +58,9 @@ const DepositModal: React.FC<{
             <p className="text-sm text-black font-light mt-1">
               ${Number(transactionAmount).toFixed(2)}
             </p>
+            {!isAmountValid && (
+              <p className="text-sm text-red-500 mt-1">Insufficient USDC balance</p>
+            )}
           </div>
         </div>
 
@@ -72,7 +79,7 @@ const DepositModal: React.FC<{
           <button
             onClick={handleDeposit}
             className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
-            disabled={isProcessing}  // Disable while processing
+            disabled={isProcessing || !isAmountValid}  // Disable if invalid amount
           >
             {isProcessing ? (
               <div className="spinner-border animate-spin border-2 rounded-full w-4 h-4 border-white border-t-transparent"></div>

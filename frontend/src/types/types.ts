@@ -5,6 +5,7 @@ export interface Vault {
   chain: string;
   protocol: string;
   name: string;
+  symbol: string;
   totalAssets: string;
   apy7d: string;
   userBalance?: string;
@@ -14,10 +15,10 @@ export interface NewUserModalProps {
   isOpen: boolean;
   onRequestClose: () => void;
   onAddUser: (username: string, walletAddress: string) => void;
-  username?: string; 
+  username?: string;
   isLoading?: boolean;
-  onChangeUsername?: (username: string) => void; 
-  onCreateAccount?: () => void; 
+  onChangeUsername?: (username: string) => void;
+  onCreateAccount?: () => void;
 }
 
 export interface Domain {
@@ -38,6 +39,14 @@ export interface VaultData {
     symbol: string;
     decimals: number;
   };
+  outputToken: {
+    symbol: string;
+    decimals: number;
+  };
+  protocol: {
+    name: string;
+    network: string;
+  }
   name: string;
   rates: Rate[];
   totalValueLockedUSD: string;

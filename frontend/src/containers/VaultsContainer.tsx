@@ -18,6 +18,7 @@ import { getContract } from "thirdweb";
 import { client } from "../utils/client";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { toast } from "react-toastify";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -76,9 +77,14 @@ const VaultsContainer = () => {
         scaledAmount, //TODO make this general for all tokens?
       );
       console.log("Transaction confirmed")
+      toast.success("Transaction confirmed");
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
+      toast.error("Transaction failed", {
+        position: "top-right",
+        autoClose: 3000,  // Close automatically after 3 seconds
+      });
       throw new Error("Transaction failed");
     }
   };
@@ -93,9 +99,14 @@ const VaultsContainer = () => {
         EOAaccount,
         scaledAmount,
       );
+      toast.success("Transaction confirmed");
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
+      toast.error("Transaction failed", {
+        position: "top-right",
+        autoClose: 3000,  // Close automatically after 3 seconds
+      });
       throw new Error("Transaction failed");
     }
   };
@@ -122,7 +133,7 @@ const VaultsContainer = () => {
         const data: VaultData[] = await fetchVaultData(VAULT_IDS);
   
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
-          const { id, inputToken, name, rates, totalValueLockedUSD } =
+          const { id, name, protocol, inputToken, outputToken, rates, totalValueLockedUSD } =
             vaultData;
   
           const lenderVariableRate = rates.find(
@@ -134,10 +145,10 @@ const VaultsContainer = () => {
   
           return {
             id,
+            protocol: protocol.name,
             name: name || "Unnamed Vault",
-            symbol: inputToken.symbol || "N/A",
-            chain: "Arbitrum",
-            protocol: "Aave",
+            symbol: outputToken.symbol || "N/A",
+            chain: protocol.network,
             totalAssets: totalValueLockedUSD
               ? formatTotalAssets(totalValueLockedUSD, inputToken.decimals)
               : "N/A",
@@ -167,7 +178,7 @@ const VaultsContainer = () => {
     if (activeAccount) {
       init();
     }
-  }, [activeAccount]);
+  }, [activeAccount, updateUserVaultBalances]);
   
 
   const handleUserChange = (username: string) => {
