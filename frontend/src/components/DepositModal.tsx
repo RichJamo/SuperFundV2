@@ -23,7 +23,7 @@ const DepositModal: React.FC<{
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
       <div className="bg-white rounded-xl p-8 w-full max-w-lg shadow-lg">
         {/* Modal header */}
-        <h2 className="text-2xl font-semibold mb-6 text-center">Deposit</h2>
+        <h2 className="text-2xl font-semibold mb-6 text-center text-gray-700">Deposit</h2>
 
         {/* Input for deposit/withdraw amount */}
         <div className="flex gap-4">
