@@ -100,10 +100,10 @@ export default function Page() {
               wallets={wallets}
               connectButton={{ label: "Get Started" }}
               connectModal={{ size: "compact" }}
-              // accountAbstraction={{
-              //   chain: arbitrum,
-              //   sponsorGas: true,
-              // }}
+              accountAbstraction={{
+                chain: arbitrum,
+                sponsorGas: true,
+              }}
             />
           )}
         </div>
