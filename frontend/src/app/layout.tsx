@@ -8,8 +8,8 @@ import 'react-toastify/dist/ReactToastify.css'; // Import the Toastify CSS
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OmniYield",
-  description: "OmniYield Yield Aggregator",
+  title: "Amana",
+  description: "Amana Yield Aggregator",
 };
 
 export default function RootLayout({

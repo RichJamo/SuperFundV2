@@ -27,6 +27,7 @@ const VaultsContainer = () => {
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
 
   const EOAaccount = useActiveAccount();
+  
   useEffect(() => {
     if (EOAaccount) {
       setActiveAccount(EOAaccount);
@@ -34,6 +35,7 @@ const VaultsContainer = () => {
       setActiveAccount(null);
     }
   }, [EOAaccount]);
+
   if (!EOAaccount) {
     throw new Error("No active account found");
   }
@@ -178,7 +180,7 @@ const VaultsContainer = () => {
     if (activeAccount) {
       init();
     }
-  }, [activeAccount, updateUserVaultBalances]);
+  }, [activeAccount]);
   
 
   const handleUserChange = (username: string) => {

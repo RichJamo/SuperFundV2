@@ -20,6 +20,7 @@ const wallets = [
     auth: {
       options: ["google", "email", "passkey"],
     },
+    smartAccount: { chain: arbitrum, sponsorGas: true } ,
   }),
   createWallet("io.metamask"),
   createWallet("com.coinbase.wallet"),
@@ -42,7 +43,7 @@ export default function Page() {
         <nav className="w-3/8 bg-gray-800 text-white p-6 rounded-lg">
           <div className="mb-8">
             <h1 className="text-3xl font-bold tracking-tighter text-zinc-100">
-              SuperFund
+              Amana
             </h1>
           </div>
           <ul className="space-y-4">
@@ -60,7 +61,7 @@ export default function Page() {
               }`}
               onClick={() => setActiveSection("buy")}
             >
-              Buy Crypto
+              Fund Wallet
             </li>
           </ul>
         </nav>
@@ -99,10 +100,10 @@ export default function Page() {
               wallets={wallets}
               connectButton={{ label: "Get Started" }}
               connectModal={{ size: "compact" }}
-              accountAbstraction={{
-                chain: arbitrum,
-                sponsorGas: true,
-              }}
+              // accountAbstraction={{
+              //   chain: arbitrum,
+              //   sponsorGas: true,
+              // }}
             />
           )}
         </div>
@@ -115,7 +116,7 @@ function Header() {
   return (
     <header className="flex flex-col items-center justify-center space-y-4">
       <h1 className="text-2xl md:text-6xl font-bold tracking-tighter text-zinc-100">
-        OmniYield
+        Amana
       </h1>
 
       <p className="text-zinc-300 text-base">

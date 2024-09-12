@@ -42,7 +42,7 @@ const BuyView: React.FC = ({}) => {
             chain: false, // disable selecting buy chain
           },
         },
-        
+        metadata: {name: "Fund Wallet"},
       }}
       />
 
