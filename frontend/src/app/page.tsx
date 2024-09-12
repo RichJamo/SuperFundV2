@@ -38,7 +38,7 @@ export default function Page() {
   );
 
   return (
-    <main className="p-4 pb-10 min-h-[100vh] flex container mx-auto relative overflow-x-hidden">
+    <main className="p-4 pb-10 h-[100vh] flex container mx-auto relative overflow-x-hidden">
       {account && (
         <nav className="w-3/8 bg-gray-800 text-white p-6 rounded-lg">
           <div className="mb-8">
@@ -67,7 +67,7 @@ export default function Page() {
         </nav>
       )}
       <div className="flex-1 py-20 pl-6">
-        <div className="relative flex flex-col items-center justify-center min-h-screen space-y-8">
+        <div className="relative flex flex-col items-center justify-start h-screen space-y-8">
           {!account && <Header />}
           {account && (
             <div className="absolute top-0 right-0 transform translate-x-[+10%] translate-y-[-90%]">
@@ -114,7 +114,7 @@ export default function Page() {
 
 function Header() {
   return (
-    <header className="flex flex-col items-center justify-center space-y-4">
+    <header className="flex flex-col items-center justify-center mt-40 space-y-4">
       <h1 className="text-2xl md:text-6xl font-bold tracking-tighter text-zinc-100">
         Amana
       </h1>
