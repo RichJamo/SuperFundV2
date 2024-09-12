@@ -7,7 +7,7 @@ import { client } from "../utils/client"; // Adjust the path if needed
 import VaultsContainer from "../containers/VaultsContainer"; // Adjust the path if needed
 import BuyContainer from "../containers/BuyContainer"; // Adjust the path if needed
 import Image from "next/image";
-import { inAppWallet } from "thirdweb/wallets";
+import { inAppWallet, createWallet } from "thirdweb/wallets";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "@/constants";
 
@@ -21,6 +21,13 @@ const wallets = [
       options: ["google", "email", "passkey"],
     },
   }),
+  createWallet("io.metamask"),
+  createWallet("com.coinbase.wallet"),
+  createWallet("me.rainbow"),
+  createWallet("io.rabby"),
+  createWallet("com.trustwallet.app"),
+  createWallet("com.ledger"),
+  createWallet("global.safe"),
 ];
 
 export default function Page() {
@@ -59,7 +66,7 @@ export default function Page() {
         </nav>
       )}
       <div className="flex-1 py-20 pl-6">
-        <div className="relative flex flex-col items-center mb-20">
+        <div className="relative flex flex-col items-center justify-center min-h-screen space-y-8">
           {!account && <Header />}
           {account && (
             <div className="absolute top-0 right-0 transform translate-x-[+10%] translate-y-[-90%]">
@@ -84,15 +91,16 @@ export default function Page() {
           {account ? (
             <>
               {activeSection === "vaults" && <VaultsContainer />}
-              {activeSection === "buy" && <BuyContainer/>}
+              {activeSection === "buy" && <BuyContainer />}
             </>
           ) : (
             <ConnectButton
               client={client}
               wallets={wallets}
+              connectButton={{ label: "Get Started" }}
               connectModal={{ size: "compact" }}
               accountAbstraction={{
-                chain: arbitrum, // replace with the chain you want
+                chain: arbitrum,
                 sponsorGas: true,
               }}
             />
@@ -105,24 +113,13 @@ export default function Page() {
 
 function Header() {
   return (
-    <header className="flex flex-col items-center mb-20 md:mb-20">
-      <Image
-        src={superfundLogo}
-        alt=""
-        className="size-[150px] md:size-[150px]"
-        style={
-          {
-            // filter: "drop-shadow(0px 0px 24px #a726a9a8)"
-          }
-        }
-      />
-
-      <h1 className="text-2xl md:text-6xl font-bold tracking-tighter mb-6 text-zinc-100">
+    <header className="flex flex-col items-center justify-center space-y-4">
+      <h1 className="text-2xl md:text-6xl font-bold tracking-tighter text-zinc-100">
         OmniYield
       </h1>
 
       <p className="text-zinc-300 text-base">
-        Please connect your wallet to get started.
+        Connect your wallet or login / signup to get started.
       </p>
     </header>
   );
