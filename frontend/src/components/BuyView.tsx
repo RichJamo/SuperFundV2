@@ -10,30 +10,15 @@ const BuyView: React.FC = ({}) => {
     <div className="mt-16">
 
       <PayEmbed 
-      client={client} 
+      client={client}
       payOptions={{
-        buyWithCrypto: {
-          prefillSource: {
-            allowEdits: {
-              chain: false,
-              token: false,
-            },
-            chain: arbitrum,
-            token: {
-              address: ARBITRUM_USDC_CONTRACT_ADDRESS,
-              name: "Arbitrum USDC",
-              symbol: "USDC",
-            }
-          }
-        },
-        buyWithFiat: 
-        {
-        },
+        mode: "fund_wallet",
         prefillBuy: {
           token: {
             address: ARBITRUM_USDC_CONTRACT_ADDRESS,
             name: "Arbitrum USDC",
             symbol: "USDC",
+            icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
           },
           chain: arbitrum,
           allowEdits: {
@@ -42,7 +27,24 @@ const BuyView: React.FC = ({}) => {
             chain: false, // disable selecting buy chain
           },
         },
-        metadata: {name: "Fund Wallet"},
+        buyWithCrypto: {
+          prefillSource: {
+            allowEdits: {
+              chain: false,
+              token: false,
+            },
+            chain: arbitrum,
+            // token: {
+            //   address: ARBITRUM_USDC_CONTRACT_ADDRESS,
+            //   name: "Arbitrum USDC",
+            //   symbol: "USDC",
+            // }
+          }
+        },
+        buyWithFiat: 
+        {
+        },
+        // metadata: {name: "Fund Wallet"},
       }}
       />
 
