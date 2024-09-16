@@ -6,6 +6,7 @@ import superfundLogo from "../../public/superfund_logo.jpg"; // Adjust the path 
 import { client } from "../utils/client"; // Adjust the path if needed
 import VaultsContainer from "../containers/VaultsContainer"; // Adjust the path if needed
 import BuyContainer from "../containers/BuyContainer"; // Adjust the path if needed
+import About from "../components/About"; // Adjust the path if needed
 import Image from "next/image";
 import { inAppWallet, createWallet } from "thirdweb/wallets";
 import { arbitrum } from "thirdweb/chains";
@@ -33,7 +34,7 @@ const wallets = [
 
 export default function Page() {
   const account = useActiveAccount();
-  const [activeSection, setActiveSection] = useState<"vaults" | "buy">(
+  const [activeSection, setActiveSection] = useState<"vaults" | "buy" | "about">(
     "vaults"
   );
 
@@ -62,6 +63,14 @@ export default function Page() {
               onClick={() => setActiveSection("buy")}
             >
               Fund Wallet
+            </li>
+            <li
+              className={`cursor-pointer ${
+                activeSection === "about" ? "font-bold" : ""
+              }`}
+              onClick={() => setActiveSection("about")}
+            >
+              About
             </li>
           </ul>
         </nav>
@@ -93,6 +102,7 @@ export default function Page() {
             <>
               {activeSection === "vaults" && <VaultsContainer />}
               {activeSection === "buy" && <BuyContainer />}
+              {activeSection === "about" && <About />}
             </>
           ) : (
             <ConnectButton
@@ -119,8 +129,11 @@ function Header() {
         Amana
       </h1>
 
-      <p className="text-zinc-300 text-base">
-        Connect your wallet or login / signup to get started.
+      <p className="text-zinc-300 text-base text-center">
+        Connect your wallet or login / signup to get started.<br />
+        If you are connecting for the first time, a new smart account will be created for you.<br />
+        This makes it possible for us to offer you 1-click, gas-free transactions.<br />
+        This smart account wallet belongs to you, and only you can access your private key.
       </p>
     </header>
   );
