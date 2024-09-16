@@ -39,7 +39,7 @@ export default function Page() {
   );
 
   return (
-    <main className="p-4 pb-10 h-[100vh] flex container mx-auto relative overflow-x-hidden">
+    <main className="p-4 pb-10 min-h-screen flex container mx-auto relative overflow-hidden">
       {account && (
         <nav className="w-3/8 bg-gray-800 text-white p-6 rounded-lg">
           <div className="mb-8">
@@ -76,16 +76,14 @@ export default function Page() {
         </nav>
       )}
       <div className="flex-1 py-20 pl-6">
-        <div className="relative flex flex-col items-center justify-start h-screen space-y-8">
+        <div className="relative flex flex-col items-center justify-start h-full space-y-8">
           {!account && <Header />}
           {account && (
             <div className="absolute top-0 right-0 transform translate-x-[+10%] translate-y-[-90%]">
               <ConnectButton
                 client={client}
                 wallets={wallets}
-                connectModal={{ 
-                  size: "compact" 
-                }}
+                connectModal={{ size: "compact" }}
                 accountAbstraction={{
                   chain: arbitrum,
                   sponsorGas: true,
