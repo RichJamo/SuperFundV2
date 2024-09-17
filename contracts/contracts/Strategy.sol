@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IAavePool {
     function supply(
@@ -18,9 +19,9 @@ interface IAavePool {
     ) external returns (uint256);
 }
 
-contract Strategy {
+contract Strategy is Ownable {
     address public vault;
-    address public governance;
+    // address public governance;
     address public constant ARBITRUM_USDC_CONTRACT_ADDRESS =
         0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant AAVE_POOL_ADDRESS =
@@ -29,9 +30,10 @@ contract Strategy {
     IERC20 public usdc;
     IAavePool public aavePool;
 
-    constructor(address _vault, address _governance) {
+    constructor(address _vault) {
+        // , address _governance
         vault = _vault;
-        governance = _governance;
+        // governance = _governance;
         usdc = IERC20(ARBITRUM_USDC_CONTRACT_ADDRESS);
         aavePool = IAavePool(AAVE_POOL_ADDRESS);
     }
