@@ -10,7 +10,7 @@ import { getHardhatConfigNetworks } from "@zetachain/networks";
 import { HardhatUserConfig } from "hardhat/config";
 import * as dotenv from "dotenv";
 
-dotenv.config();  // Load environment variables from .env
+dotenv.config();
 
 const config: HardhatUserConfig = {
   networks: {
