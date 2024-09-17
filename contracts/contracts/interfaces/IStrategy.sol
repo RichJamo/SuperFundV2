@@ -5,4 +5,6 @@ interface IStrategy {
     function invest(uint256 amount) external;
 
     function withdraw(uint256 _amount) external;
+
+    function totalSupply() external view returns (uint256);
 }

@@ -5,6 +5,7 @@ import "./tasks/deployStrategy";
 
 import "@nomicfoundation/hardhat-toolbox";
 import "@zetachain/toolkit/tasks";
+import "@typechain/hardhat";
 
 import { getHardhatConfigNetworks } from "@zetachain/networks";
 import { HardhatUserConfig } from "hardhat/config";
@@ -18,6 +19,12 @@ const config: HardhatUserConfig = {
     arbitrumOne: {
       url: "https://arb1.arbitrum.io/rpc",
       accounts: [process.env.PRIVATE_KEY],
+    },
+    hardhat: {
+      forking: {
+        url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+        blockNumber: 254484759, // Optional: Set a block number to fork from
+      },
     },
   },
   solidity: {
@@ -34,6 +41,10 @@ const config: HardhatUserConfig = {
     apiKey: {
       arbitrumOne: process.env.ARBISCAN_API_KEY || "", // Add your Arbiscan API key here
     },
+  },
+  typechain: {
+    outDir: "typechain",  // This is where Typechain outputs the generated types
+    target: "ethers-v5",  // Target ethers.js
   },
 };
 

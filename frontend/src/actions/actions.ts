@@ -2,6 +2,7 @@ import { Address, getContract, prepareContractCall, sendTransaction } from "thir
 import { client } from "../utils/client";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { GENERIC_VAULT_ADDRESS } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { sendBatchTransaction, readContract } from "thirdweb";
@@ -10,36 +11,29 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
   let contract = getContract({
     client,
     chain: arbitrum,
-    address: vaultId
-  });
-  const poolAddress = await readContract({
-    contract: contract,
-    method: 'function POOL() view returns (address pool)'
-  });
-  contract = getContract({
-    client,
-    chain: arbitrum,
     address: ARBITRUM_USDC_CONTRACT_ADDRESS
   });
   const approveTx = prepareContractCall({
     contract,
     method: "function approve(address to, uint256 value)",
-    params: [poolAddress, transactionAmount]
+    params: [GENERIC_VAULT_ADDRESS, transactionAmount]
   });
+  console.log("approveTx", approveTx);
   contract = getContract({
     client,
     chain: arbitrum,
-    address: poolAddress
+    address: GENERIC_VAULT_ADDRESS
   });
   const supplyTx = prepareContractCall({
     contract,
     method:
-      "function supply(address asset, uint256 amount, address onBehalfOf, uint16 referralCode)",
-    params: [ARBITRUM_USDC_CONTRACT_ADDRESS, transactionAmount, activeAccount?.address, 0] // use a referral code?
+      "function deposit(uint256 assets,  address receiver)",
+    params: [transactionAmount, activeAccount?.address]
   });
-  await sendBatchTransaction({
+  console.log("supplyTx", supplyTx);
+  await sendTransaction({
     account: activeAccount,
-    transactions: [approveTx, supplyTx]
+    transaction: supplyTx
   });
 };
 
@@ -47,22 +41,13 @@ export const executeWithdrawal = async (vaultId: Address, activeAccount: Account
   let contract = getContract({
     client,
     chain: arbitrum,
-    address: vaultId
-  });
-  const poolAddress = await readContract({
-    contract: contract,
-    method: 'function POOL() view returns (address pool)'
-  });
-  contract = getContract({
-    client,
-    chain: arbitrum,
-    address: poolAddress
+    address: GENERIC_VAULT_ADDRESS
   });
   const withdrawTx = prepareContractCall({
     contract,
     method:
-      "function withdraw(address asset, uint256 amount, address to)",
-    params: [ARBITRUM_USDC_CONTRACT_ADDRESS, BigInt(withdrawAmount), activeAccount?.address]
+      "function withdraw(uint256 assets, address receiver, address owner)",
+    params: [BigInt(withdrawAmount), activeAccount?.address, activeAccount?.address]
   });
   await sendTransaction({
     account: activeAccount,

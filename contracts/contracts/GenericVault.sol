@@ -101,8 +101,14 @@ contract GenericVault is ERC20, IERC4626, Ownable {
 
     /** @dev See {IERC4626-totalAssets}. */
     function totalAssets() public view virtual override returns (uint256) {
-        // make call to target chain to get total assets
-        return _asset.balanceOf(address(this));
+        // Get the amount of USDC held directly by the vault
+        uint256 usdcBalance = _asset.balanceOf(address(this));
+
+        // Call the strategy to get the equivalent value of aArbUSDC in terms of USDC
+        uint256 strategyUSDCValue = IStrategy(strategyAddress).totalSupply();
+
+        // Return the total assets: USDC held in the vault + USDC equivalent held in the strategy
+        return usdcBalance + strategyUSDCValue;
     }
 
     /** @dev See {IERC4626-convertToShares}. */
@@ -228,9 +234,9 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         );
 
         uint256 shares = previewWithdraw(assets);
+        withdrawFromStrategy(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
-        withdrawFromStrategy(assets);
         return shares;
     }
 
@@ -245,15 +251,14 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
-
         withdrawFromStrategy(assets);
+
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;
     }
 
     function withdrawFromStrategy(uint256 amount) private {
-        // NOTE: does this really need to be a separate function?
         IStrategy(strategyAddress).withdraw(amount);
     }
     /**
