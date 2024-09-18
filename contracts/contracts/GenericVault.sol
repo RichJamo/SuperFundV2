@@ -105,7 +105,8 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         uint256 usdcBalance = _asset.balanceOf(address(this));
 
         // Call the strategy to get the equivalent value of aArbUSDC in terms of USDC
-        uint256 strategyUSDCValue = IStrategy(strategyAddress).totalSupply();
+        uint256 strategyUSDCValue = IStrategy(strategyAddress)
+            .totalUnderlyingAssets();
 
         // Return the total assets: USDC held in the vault + USDC equivalent held in the strategy
         return usdcBalance + strategyUSDCValue;

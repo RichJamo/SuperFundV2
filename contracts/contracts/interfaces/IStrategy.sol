@@ -6,5 +6,5 @@ interface IStrategy {
 
     function withdraw(uint256 _amount) external;
 
-    function totalSupply() external view returns (uint256);
+    function totalUnderlyingAssets() external view returns (uint256);
 }
