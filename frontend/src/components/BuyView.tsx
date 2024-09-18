@@ -44,7 +44,7 @@ const BuyView: React.FC = ({}) => {
         buyWithFiat: 
         {
         },
-        // metadata: {name: "Fund Wallet"},
+        metadata: {name: "Fund Wallet"},
       }}
       />
 
