@@ -45,5 +45,17 @@ contract Strategy is Ownable {
         return aaveReceiptToken.balanceOf(address(this));
     }
 
+    function emergencyWithdraw(address _token) external onlyOwner {
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        SafeERC20.safeTransfer(IERC20(_token), owner(), balance);
+    }
+
+    function emergencyWithdrawETH() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No ETH to withdraw");
+        payable(owner()).transfer(balance);
+    }
+
     receive() external payable {}
 }

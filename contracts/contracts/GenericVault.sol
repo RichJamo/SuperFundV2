@@ -51,13 +51,23 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         _asset = asset_;
     }
 
-    // Function to set the strategy address, only callable by the owner
     function setStrategy(address _strategyAddress) external onlyOwner {
         require(_strategyAddress != address(0), "Invalid strategy address");
         strategyAddress = _strategyAddress;
         emit StrategyUpdated(_strategyAddress);
     }
 
+    function emergencyWithdraw(address _token) external onlyOwner {
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        SafeERC20.safeTransfer(IERC20(_token), owner(), balance);
+    }
+
+    function emergencyWithdrawETH() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No ETH to withdraw");
+        payable(owner()).transfer(balance);
+    }
     /**
      * @dev Attempts to fetch the asset decimals. A return value of false indicates that the attempt failed in some way.
      */
@@ -235,7 +245,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         );
 
         uint256 shares = previewWithdraw(assets);
-        withdrawFromStrategy(assets);
+        IStrategy(strategyAddress).withdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return shares;
@@ -252,16 +262,12 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
-        withdrawFromStrategy(assets);
-
+        IStrategy(strategyAddress).withdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;
     }
 
-    function withdrawFromStrategy(uint256 amount) private {
-        IStrategy(strategyAddress).withdraw(amount);
-    }
     /**
      * @dev Internal conversion function (from assets to shares) with support for rounding direction.
      *
