@@ -57,7 +57,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   }
 };
 
-task("deployVault", "Deploy the GenericVault contract", main)
+task("deploy-vault", "Deploy the GenericVault contract", main)
   .addFlag("json", "Output in JSON")
   .addOptionalParam("name", "Token name", "GenericVault")
   .addOptionalParam("symbol", "Token symbol", "GV")

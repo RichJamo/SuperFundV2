@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { Contract, Signer } from "ethers";
 import { IERC20 } from "../typechain-types";
 
-describe("Vault and Strategy", function () {
+describe("Vault and AaveStrategy", function () {
   let vault: Contract;
   let strategy: Contract;
   let usdc: IERC20;
@@ -50,9 +50,9 @@ describe("Vault and Strategy", function () {
     const Vault = await ethers.getContractFactory("GenericVault", owner);
     vault = await Vault.deploy("GenericVault", "GV", ARBITRUM_USDC_ADDRESS);
 
-    // Deploy Strategy contract and set the vault address
-    const Strategy = await ethers.getContractFactory("Strategy", owner);
-    strategy = await Strategy.deploy(vault.address);
+    // Deploy AaveStrategy contract and set the vault address
+    const AaveStrategy = await ethers.getContractFactory("AaveStrategy", owner);
+    strategy = await AaveStrategy.deploy(vault.address);
 
     // Set the strategy address in the vault
     await vault.setStrategy(strategy.address);
@@ -68,7 +68,7 @@ describe("Vault and Strategy", function () {
     await usdc.connect(usdcHolder).transfer(await user2.getAddress(), depositAmount2);
   });
 
-  describe("Strategy Investment", function () {
+  describe("AaveStrategy Investment", function () {
     it("should invest USDC into Aave via the strategy", async function () {
       const depositAmount = ethers.utils.parseUnits("1000", 6); // 1000 USDC
       await usdc.connect(user1).approve(vault.address, depositAmount);

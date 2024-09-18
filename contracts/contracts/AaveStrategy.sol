@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAavePool.sol";
 
-contract Strategy is Ownable {
+contract AaveStrategy is Ownable {
     address public vault;
     address public constant ARBITRUM_USDC_CONTRACT_ADDRESS =
         0xaf88d065e77c8cC2239327C5EDb3A432268e5831;

@@ -22,19 +22,19 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  // Fetch the vault address argument required for the Strategy constructor
+  // Fetch the vault address argument required for the AaveStrategy constructor
   const vault = args.vault; // This should be passed as an argument
   if (!vault) {
     throw new Error("🚨 Vault address is required");
   }
 
-  // Deploy the Strategy contract
-  const factory = await hre.ethers.getContractFactory("Strategy");
+  // Deploy the AaveStrategy contract
+  const factory = await hre.ethers.getContractFactory("AaveStrategy");
   const contract = await factory.deploy(vault);
   await contract.deployed();
 
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed Strategy on ArbitrumOne.`);
+  console.log(`🚀 Successfully deployed AaveStrategy on ArbitrumOne.`);
   console.log(`📜 Contract address: ${contract.address}`);
 
   // Verify the contract on Arbiscan
@@ -59,7 +59,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 };
 
 // Define the Hardhat task for deployment
-task("deploy-strategy", "Deploy the Strategy contract", main)
+task("deploy-strategy", "Deploy the AaveStrategy contract", main)
   .addFlag("json", "Output in JSON")
   .addParam("vault", "The address of the vault");
 

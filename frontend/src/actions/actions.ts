@@ -31,9 +31,9 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
     params: [transactionAmount, activeAccount?.address]
   });
   console.log("supplyTx", supplyTx);
-  await sendTransaction({
+  await sendBatchTransaction({
     account: activeAccount,
-    transaction: supplyTx
+    transactions: [approveTx, supplyTx]
   });
 };
 
