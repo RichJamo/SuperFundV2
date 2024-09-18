@@ -54,7 +54,7 @@ const VaultsContainer = () => {
         try {
           const balance = await fetchUserVaultBalance(
             activeAccount?.address as Address,
-            vault.id as Address
+            "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486" as Address
           );
           return { ...vault, userBalance: balance }; // Return updated vault
         } catch (error) {
