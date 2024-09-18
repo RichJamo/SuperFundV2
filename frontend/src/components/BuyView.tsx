@@ -3,6 +3,7 @@ import { PayEmbed } from "thirdweb/react";
 import { client } from "../utils/client";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { truncate } from "fs/promises";
 
 const BuyView: React.FC = ({}) => {
 
@@ -31,7 +32,7 @@ const BuyView: React.FC = ({}) => {
           prefillSource: {
             allowEdits: {
               chain: false,
-              token: false,
+              token: true,
             },
             chain: arbitrum,
             // token: {
