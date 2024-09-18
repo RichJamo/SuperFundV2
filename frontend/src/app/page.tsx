@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import superfundLogo from "../../public/superfund_logo.jpg"; // Adjust the path if needed
 import { client } from "../utils/client"; // Adjust the path if needed
@@ -11,6 +11,7 @@ import Image from "next/image";
 import { inAppWallet, createWallet } from "thirdweb/wallets";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "@/constants";
+import mixpanel from "mixpanel-browser";
 
 // Set the root element where your app is rendered
 // In Next.js, you might not need this as Next.js manages the root element
@@ -37,6 +38,35 @@ export default function Page() {
   const [activeSection, setActiveSection] = useState<"vaults" | "buy" | "about">(
     "vaults"
   );
+
+  useEffect(() => {
+    mixpanel.init("1f01d05893463c7ba9d4ac7280821010", {
+      debug: true,
+      track_pageview: true,
+      persistence: "localStorage",
+    });
+
+    mixpanel.track('Page Viewed', {
+      page: 'Landing Page',
+      section: activeSection,
+    });
+  }, []); // Empty dependency array ensures this runs once
+
+  // Identify user and set people properties after wallet connection
+  useEffect(() => {
+    if (account) {
+      // Identify the user using the account address or any other unique identifier
+      mixpanel.identify(account.address);
+
+      // Set additional user properties
+      mixpanel.people.set({
+        '$name': 'Jane Doe', // Replace with dynamic name if available
+        '$email': 'jane.doe@example.com', // Replace with dynamic email if available
+        'plan': 'Premium', // You can dynamically set user plan or other attributes
+        'wallet_address': account.address // Store the wallet address as a user property
+      });
+    }
+  }, [account]); // This effect will run when the `account` changes
 
   return (
     <main className="p-4 pb-10 min-h-screen flex container mx-auto relative overflow-hidden">
