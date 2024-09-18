@@ -3,6 +3,7 @@ import { Vault } from "../types/types";
 import { Address } from "thirdweb";
 import DepositModal from "./DepositModal";
 import WithdrawModal from "./WithdrawModal";
+import mixpanel from "mixpanel-browser";
 
 interface VaultsViewProps {
   loading: boolean;
@@ -30,11 +31,18 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 
   const handleDepositClick = (vault: Vault) => {
     setSelectedVault(vault);
+    mixpanel.track("Deposit Button Clicked", {
+      vault: vault.name,
+    });
+
     setDepositModalOpen(true);
   };
 
   const handleWithdrawClick = (vault: Vault) => {
     setSelectedVault(vault);
+    mixpanel.track("Withdraw Button Clicked", {
+      vault: vault.name,
+    });
     setWithdrawModalOpen(true);
   };
 

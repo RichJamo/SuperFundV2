@@ -19,6 +19,7 @@ import { client } from "../utils/client";
 import { arbitrum } from "thirdweb/chains";
 import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
 import { toast } from "react-toastify";
+import mixpanel from "mixpanel-browser";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -73,16 +74,27 @@ const VaultsContainer = () => {
       setTransactionAmount;
       const value = Number(transactionAmount)
       const scaledAmount = BigInt(value * 10**6)
+      mixpanel.track("Deposit Submitted", {
+        vault: vaultId.toString(),
+        amount: scaledAmount,
+      });
       await executeDeposit(
         vaultId,
         EOAaccount,
         scaledAmount, //TODO make this general for all tokens?
       );
+      mixpanel.track("Deposit Submitted", {
+        vault: vaultId.toString(),
+        amount: scaledAmount,
+      });
       console.log("Transaction confirmed")
       toast.success("Transaction confirmed");
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
+      mixpanel.track("Deposit Submitted", {
+        vault: vaultId.toString(),
+      });
       toast.error("Transaction failed", {
         position: "top-right",
         autoClose: 3000,  // Close automatically after 3 seconds
@@ -96,15 +108,26 @@ const VaultsContainer = () => {
       setTransactionAmount;
       const value = Number(transactionAmount)
       const scaledAmount = BigInt(value * 10**6)
+      mixpanel.track("Withdraw Submitted", {
+        vault: vaultId.toString(),
+        amount: scaledAmount,
+      });
       await executeWithdrawal(
         vaultId,
         EOAaccount,
         scaledAmount,
       );
+      mixpanel.track("Withdraw Succeeded", {
+        vault: vaultId.toString(),
+        amount: scaledAmount,
+      });
       toast.success("Transaction confirmed");
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
+      mixpanel.track("Withdraw Failed", {
+        vault: vaultId.toString(),
+      });
       toast.error("Transaction failed", {
         position: "top-right",
         autoClose: 3000,  // Close automatically after 3 seconds

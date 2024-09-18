@@ -60,9 +60,6 @@ export default function Page() {
 
       // Set additional user properties
       mixpanel.people.set({
-        '$name': 'Jane Doe', // Replace with dynamic name if available
-        '$email': 'jane.doe@example.com', // Replace with dynamic email if available
-        'plan': 'Premium', // You can dynamically set user plan or other attributes
         'wallet_address': account.address // Store the wallet address as a user property
       });
     }
@@ -90,7 +87,10 @@ export default function Page() {
               className={`cursor-pointer ${
                 activeSection === "buy" ? "font-bold" : ""
               }`}
-              onClick={() => setActiveSection("buy")}
+              onClick={() => {
+                mixpanel.track("Fund Wallet Clicked");
+                setActiveSection("buy")}
+              }
             >
               Fund Wallet
             </li>
@@ -98,7 +98,10 @@ export default function Page() {
               className={`cursor-pointer ${
                 activeSection === "about" ? "font-bold" : ""
               }`}
-              onClick={() => setActiveSection("about")}
+              onClick={() => {
+                mixpanel.track("Fund Wallet Clicked");
+                setActiveSection("about")}
+              }
             >
               About
             </li>
