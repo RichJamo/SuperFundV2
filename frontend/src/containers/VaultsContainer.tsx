@@ -76,7 +76,7 @@ const VaultsContainer = () => {
       const scaledAmount = BigInt(value * 10**6)
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
-        amount: scaledAmount,
+        amount: scaledAmount.toString(),
       });
       await executeDeposit(
         vaultId,
@@ -85,7 +85,7 @@ const VaultsContainer = () => {
       );
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
-        amount: scaledAmount,
+        amount: scaledAmount.toString(),
       });
       console.log("Transaction confirmed")
       toast.success("Transaction confirmed");
@@ -110,7 +110,7 @@ const VaultsContainer = () => {
       const scaledAmount = BigInt(value * 10**6)
       mixpanel.track("Withdraw Submitted", {
         vault: vaultId.toString(),
-        amount: scaledAmount,
+        amount: scaledAmount.toString(),
       });
       await executeWithdrawal(
         vaultId,
@@ -119,7 +119,7 @@ const VaultsContainer = () => {
       );
       mixpanel.track("Withdraw Succeeded", {
         vault: vaultId.toString(),
-        amount: scaledAmount,
+        amount: scaledAmount.toString(),
       });
       toast.success("Transaction confirmed");
       refetch();
