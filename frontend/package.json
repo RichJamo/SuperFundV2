@@ -16,7 +16,7 @@
     "react-dom": "^18.3",
     "react-modal": "^3.16.1",
     "react-toastify": "^10.0.5",
-    "thirdweb": "^5"
+    "thirdweb": "^5.57.0"
   },
   "devDependencies": {
     "@types/node": "^20",
