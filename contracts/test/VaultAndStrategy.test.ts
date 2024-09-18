@@ -50,20 +50,17 @@ describe("Vault and Strategy", function () {
       // Transfer USDC to user and approve vault
       await usdc.connect(usdcHolder).transfer(await user.getAddress(), depositAmount);
       await usdc.connect(user).approve(vault.address, depositAmount);
-      console.log("userBalanceUSDC", await usdc.balanceOf(await user.getAddress()));
-      console.log("vaultTotalAssets", await vault.totalAssets());
 
       // Deposit USDC into the vault
       await vault.connect(user).deposit(depositAmount, await user.getAddress());
 
       // Check that the strategy has invested in Aave
       const aArbUSDCBalance = await aaveToken.balanceOf(strategy.address);
-      console.log("aArbUSDC Balance in Strategy", aArbUSDCBalance.toString());
-      console.log("user Balance of GV", await vault.balanceOf(await user.getAddress()));
-      console.log("user Balance of USDC", await usdc.balanceOf(await user.getAddress()));
-      console.log("vaultTotalAssets", await vault.totalAssets());
-      console.log("vaultTotalSupply", await vault.totalSupply());
-      expect(aArbUSDCBalance).to.be.gt(0); // Should have some aArbUSDC tokens after investment
+
+      expect(aArbUSDCBalance).to.equal(depositAmount); // Should have 1000 aArbUSDC tokens after investment
+      expect(await vault.totalAssets()).to.equal(depositAmount); // Vault should have the same amount of assets
+      expect(await usdc.balanceOf(await user.getAddress())).to.equal(0); // User should have 0 USDC after deposit
+      expect(await vault.balanceOf(await user.getAddress())).to.equal(depositAmount); // User should have 1000 vault shares
     });
 
     it("should withdraw USDC from Aave via the strategy", async function () {
@@ -78,23 +75,15 @@ describe("Vault and Strategy", function () {
       await vault.connect(user).deposit(depositAmount, await user.getAddress());
       // Check that the strategy has invested in Aave
       let aArbUSDCBalance = await aaveToken.balanceOf(strategy.address);
-      console.log("aArbUSDC Balance in Strategy", aArbUSDCBalance.toString());
-      console.log("user Balance of GV", await vault.balanceOf(await user.getAddress()));
-      console.log("user Balance of USDC", await usdc.balanceOf(await user.getAddress()));
-      console.log("vaultTotalAssets", await vault.totalAssets());
-      console.log("vaultTotalSupply", await vault.totalSupply());
-
       // Withdraw USDC from the strategy
       await vault.connect(user).withdraw(depositAmount, await user.getAddress(), await user.getAddress());
       aArbUSDCBalance = await aaveToken.balanceOf(strategy.address);
 
-      console.log("aArbUSDC Balance in Strategy", aArbUSDCBalance.toString());
-      console.log("user Balance of GV", await vault.balanceOf(await user.getAddress()));
-      console.log("user Balance of USDC", await usdc.balanceOf(await user.getAddress()));
-      console.log("vaultTotalAssets", await vault.totalAssets());
-      console.log("vaultTotalSupply", await vault.totalSupply());
       // Check that USDC is back in the vault
       const userBalance = await usdc.balanceOf(user.getAddress());
+      expect(aArbUSDCBalance).to.be.closeTo(0, 5); // Should have 0 aArbUSDC tokens after investment
+      expect(await vault.totalAssets()).to.be.closeTo(0, 5); // Vault should have close to 0 assets (small amount of interest)
+      expect(await vault.balanceOf(await user.getAddress())).to.equal(0); // User should have 0 vault shares
       expect(userBalance).to.equal(depositAmount);
     });
   });
