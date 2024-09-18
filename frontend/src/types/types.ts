@@ -1,5 +1,6 @@
 import { ThirdwebClient } from "thirdweb";
 import { ChainOptions } from "thirdweb/chains";
+
 export interface Vault {
   id: string;
   chain: string;
@@ -41,14 +42,12 @@ export interface VaultData {
   };
   outputToken: {
     symbol: string;
-    decimals: number;
   };
   protocol: {
     name: string;
     network: string;
   }
   name: string;
-  rates: Rate[];
   totalValueLockedUSD: string;
 }
 

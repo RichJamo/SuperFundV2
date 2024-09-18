@@ -2,12 +2,12 @@ import { ParseEventLogsResult } from "thirdweb";
 import { TransactionResult } from "../types/types"
 
 export const formatTotalAssets = (totalAssets: string, decimals: number): string => {
-  const value = Number(totalAssets) // / Math.pow(10, decimals); - don't need to divide by decimals since the subgraph gives a dollar amount
+  const value = Number(totalAssets) / Math.pow(10, decimals);
   return value.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
 };
 

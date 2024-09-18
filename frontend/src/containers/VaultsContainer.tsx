@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { fetchVaultData } from "../utils/api";
+import { fetchVaultDataRPC } from "../actions/actions";
 import { formatTotalAssets } from "../utils/utils";
 import {
   executeDeposit,
@@ -54,7 +54,7 @@ const VaultsContainer = () => {
         try {
           const balance = await fetchUserVaultBalance(
             activeAccount?.address as Address,
-            "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486" as Address
+            vault.id as Address
           );
           return { ...vault, userBalance: balance }; // Return updated vault
         } catch (error) {
@@ -155,18 +155,18 @@ const VaultsContainer = () => {
     useEffect(() => {
     async function init() {
       try {
-        const data: VaultData[] = await fetchVaultData(VAULT_IDS);
+        const data: VaultData[] = await fetchVaultDataRPC(VAULT_IDS); // this currently gets data from the subgraph
   
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
-          const { id, name, protocol, inputToken, outputToken, rates, totalValueLockedUSD } =
+          const { id, name, protocol, inputToken, outputToken, totalValueLockedUSD } =
             vaultData;
   
-          const lenderVariableRate = rates.find(
-            (rate) => rate.type === "VARIABLE" && rate.id.startsWith("LENDER")
-          );
-          const borrowerVariableRate = rates.find(
-            (rate) => rate.type === "VARIABLE" && rate.id.startsWith("BORROWER")
-          );
+          // const lenderVariableRate = rates.find(
+          //   (rate) => rate.type === "VARIABLE" && rate.id.startsWith("LENDER")
+          // );
+          // const borrowerVariableRate = rates.find(
+          //   (rate) => rate.type === "VARIABLE" && rate.id.startsWith("BORROWER")
+          // );
   
           return {
             id,
@@ -177,15 +177,9 @@ const VaultsContainer = () => {
             totalAssets: totalValueLockedUSD
               ? formatTotalAssets(totalValueLockedUSD, inputToken.decimals)
               : "N/A",
-            previewPPS: lenderVariableRate
-              ? `${parseFloat(lenderVariableRate.rate).toFixed(2)}%`
-              : "N/A",
-            pricePerVaultShare: borrowerVariableRate
-              ? `${parseFloat(borrowerVariableRate.rate).toFixed(2)}%`
-              : "N/A",
-            apy7d: lenderVariableRate
-              ? `${parseFloat(lenderVariableRate.rate).toFixed(2)}%`
-              : "N/A",
+            previewPPS: "N/A",
+            pricePerVaultShare: "N/A",
+            apy7d: "N/A",
             userBalance: "N/A",
           };
         });
