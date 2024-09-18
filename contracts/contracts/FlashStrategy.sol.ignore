@@ -1,0 +1,179 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IAavePool.sol";
+
+contract FlashStrategy is Ownable {
+    address public vault;
+    address public constant ARBITRUM_USDC_CONTRACT_ADDRESS =
+        0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+    address public constant AAVE_POOL_ADDRESS =
+        0x794a61358D6845594F94dc1DB02A252b5b4814aD;
+    address public constant AAVE_ARBITRUM_USDCN_CONTRACT_ADDRESS =
+        0x724dc807b04555b71ed48a6896b6F41593b8C637;
+
+    IERC20 public usdc;
+    IAavePool public aavePool;
+    IERC20 public aaveReceiptToken;
+
+    constructor(address _vault) {
+        vault = _vault;
+        usdc = IERC20(ARBITRUM_USDC_CONTRACT_ADDRESS);
+        aavePool = IAavePool(AAVE_POOL_ADDRESS);
+        aaveReceiptToken = IERC20(AAVE_ARBITRUM_USDCN_CONTRACT_ADDRESS);
+    }
+
+    modifier onlyVault() {
+        require(msg.sender == vault, "Only vault can call");
+        _;
+    }
+
+    function invest(uint256 amount) external onlyVault {
+        SafeERC20.safeTransferFrom(usdc, msg.sender, address(this), amount);
+        usdc.approve(address(aavePool), amount);
+        aavePool.supply(address(usdc), amount, address(this), 0); // msg.sender or address(this)?
+    }
+
+    function withdraw(uint256 _amount) external onlyVault {
+        aavePool.withdraw(address(usdc), _amount, msg.sender);
+    }
+
+    function totalUnderlyingAssets() external view returns (uint256) {
+        return aaveReceiptToken.balanceOf(address(this));
+    }
+
+    function emergencyWithdraw(address _token) external onlyOwner {
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        SafeERC20.safeTransfer(IERC20(_token), owner(), balance);
+    }
+
+    function emergencyWithdrawETH() external onlyOwner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No ETH to withdraw");
+        payable(owner()).transfer(balance);
+    }
+
+    function deposit(
+        uint256 initialAmount,
+        address tokenAddress,
+        address mTokenAddress
+    ) external onlyOwner returns (bool) {
+        uint256 totalAmount = (initialAmount * 10) / 3;
+        uint256 flashLoanAmount = totalAmount - initialAmount;
+        bool isDeposit = true;
+        getFlashLoan(
+            tokenAddress,
+            flashLoanAmount,
+            totalAmount,
+            isDeposit,
+            mTokenAddress
+        );
+        uint256 mTokenBalance = IMToken(mTokenAddress).balanceOf(address(this));
+        require(
+            mTokenBalance >= totalAmount,
+            "LeveragedYieldFarm: Deposit failed, mToken balance mismatch"
+        );
+        return true;
+    }
+
+    function getFlashLoan(
+        address flashToken,
+        uint256 flashAmount,
+        uint256 totalAmount,
+        bool isDeposit,
+        address mTokenAddress
+    ) internal {
+        bytes memory userData = abi.encode(
+            MyFlashData({
+                flashToken: flashToken,
+                flashAmount: flashAmount,
+                totalAmount: totalAmount,
+                isDeposit: isDeposit
+            }),
+            mTokenAddress
+        );
+        IERC20[] memory tokens = new IERC20[](1);
+        tokens[0] = IERC20(flashToken);
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = flashAmount;
+        vault.flashLoan(this, tokens, amounts, userData);
+    }
+
+    function receiveFlashLoan(
+        IERC20[] memory tokens,
+        uint256[] memory amounts,
+        uint256[] memory feeAmounts,
+        bytes memory userData
+    ) external {
+        require(
+            msg.sender == address(vault),
+            "LeveragedYieldFarm: Not Balancer!"
+        );
+        (MyFlashData memory data, address mTokenAddress) = abi.decode(
+            userData,
+            (MyFlashData, address)
+        );
+        uint256 flashTokenBalance = IERC20(data.flashToken).balanceOf(
+            address(this)
+        );
+        require(
+            flashTokenBalance >= data.flashAmount + feeAmounts[0],
+            "LeveragedYieldFarm: Not enough funds to repay Balancer loan!"
+        );
+        if (data.isDeposit) {
+            handleDeposit(
+                data.totalAmount,
+                data.flashAmount,
+                data.flashToken,
+                mTokenAddress
+            );
+        } else {
+            handleWithdraw(mTokenAddress, data.flashToken);
+        }
+        IERC20(data.flashToken).transfer(
+            address(vault),
+            data.flashAmount + feeAmounts[0]
+        );
+    }
+
+    function handleDeposit(
+        uint256 totalAmount,
+        uint256 flashLoanAmount,
+        address tokenAddress,
+        address mTokenAddress
+    ) internal returns (bool) {
+        IMToken mToken = IMToken(mTokenAddress);
+        IERC20(tokenAddress).approve(mTokenAddress, totalAmount);
+        uint256 mintResult = mToken.mint(totalAmount);
+        require(mintResult == 0, "LeveragedYieldFarm: Mint failed");
+        uint256 collateralAmount = totalAmount;
+        uint256 borrowAmount = flashLoanAmount;
+        for (uint i = 0; i < 10; i++) {
+            uint256 currentBorrow = mToken.borrow(borrowAmount);
+            if (currentBorrow == 0) {
+                break;
+            }
+            collateralAmount += currentBorrow;
+            mintResult = mToken.mint(currentBorrow);
+            require(
+                mintResult == 0,
+                "LeveragedYieldFarm: Recursive mint failed"
+            );
+            uint256 maxBorrowable = (collateralAmount * collateralFactor) /
+                1e18;
+            uint256 totalBorrowed = mToken.borrowBalanceCurrent(address(this));
+            uint256 borrowableAmount = maxBorrowable - totalBorrowed;
+            if (borrowableAmount < borrowAmount / 3) {
+                break;
+            }
+            borrowAmount = borrowableAmount;
+        }
+        return true;
+    }
+
+    receive() external payable {}
+}
