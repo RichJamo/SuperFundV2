@@ -13,6 +13,7 @@ export const VAULT_IDS = [
   // "0x794a61358D6845594F94dc1DB02A252b5b4814aD", // what I originally had for the AAVE USDC pool
   // "0x724dc807b04555b71ed48a6896b6F41593b8C637", // what I got from the subgraph (this is the AToken)
   // "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5"
-  "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486"
+  // "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486" //USDC vault on Arbitrum
+  "0xab3D6F053b183547B1d64Cb0D5197C265D3e3408"
 ];
 // Other constants can be added here
