@@ -20,10 +20,14 @@ const config: HardhatUserConfig = {
       url: "https://arb1.arbitrum.io/rpc",
       accounts: [process.env.PRIVATE_KEY],
     },
+    Base: {
+      url: "wss://base-rpc.publicnode.com",
+      accounts: [process.env.PRIVATE_KEY],
+    },
     hardhat: {
       forking: {
-        url: `https://arb-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
-        blockNumber: 254484759, // Optional: Set a block number to fork from
+        url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+        blockNumber: 20113140, // Optional: Set a block number to fork from
       },
     },
   },
@@ -40,6 +44,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: {
       arbitrumOne: process.env.ARBISCAN_API_KEY || "", // Add your Arbiscan API key here
+      base: process.env.BASESCAN_API_KEY || "", // Add your Etherscan API key here
     },
   },
   typechain: {

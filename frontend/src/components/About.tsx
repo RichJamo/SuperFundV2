@@ -34,7 +34,7 @@ const About: React.FC = ({}) => {
 
       {/* <h3 className="text-xl font-medium mb-2">Seamless Multi-Chain Access</h3>
       <p className="mb-4">
-        Amana supports yield aggregation across multiple blockchains, giving users access to the best yield opportunities across Ethereum, Polygon, Arbitrum, and other chains. By using cross-chain protocols, Amana can seamlessly move assets between networks, ensuring that you always have access to the highest yields regardless of where they are.
+        Amana supports yield aggregation across multiple blockchains, giving users access to the best yield opportunities across Ethereum, Polygon, Base, and other chains. By using cross-chain protocols, Amana can seamlessly move assets between networks, ensuring that you always have access to the highest yields regardless of where they are.
       </p> */}
 
       {/* <h3 className="text-xl font-medium mb-2">Governance and Treasury Management</h3>

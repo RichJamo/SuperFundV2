@@ -5,10 +5,10 @@ import { ethers } from "hardhat";
 const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   const network = hre.network.name;
 
-  // Ensure we're deploying on ArbitrumOne
-  if (network !== "arbitrumOne") {
+  // Ensure we're deploying on base
+  if (network !== "base") {
     throw new Error(
-      '🚨 Please use the "arbitrumOne" network to deploy the contract.'
+      '🚨 Please use the "base" network to deploy the contract.'
     );
   }
 
@@ -33,11 +33,11 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   await contract.deployed();
 
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed GenericVault on ArbitrumOne.`);
+  console.log(`🚀 Successfully deployed GenericVault on base.`);
   console.log(`📜 Contract address: ${contract.address}`);
 
   // Verify the contract on Arbiscan
-  if (network === "arbitrumOne" && hre.config.etherscan.apiKey.arbitrumOne) {
+  if (network === "base" && hre.config.etherscan.apiKey.base) {
     console.log("🛠 Verifying contract on Arbiscan...");
     try {
       await hre.run("verify:verify", {

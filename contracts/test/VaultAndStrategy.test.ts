@@ -31,8 +31,8 @@ describe("Vault and AaveStrategy", function () {
   //  - check for edge cases with minimum withdrawals
   //  - check for withdrawal in shares rather than assets
 
-  // Addresses for USDC and Aave Pool on Arbitrum
-  const ARBITRUM_USDC_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+  // Addresses for USDC and Aave Pool on Base
+  const BASE_USDC_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
   const AAVE_POOL_ADDRESS = "0x794a61358D6845594F94dc1DB02A252b5b4814aD";
   const AAVE_RECEIPT_TOKEN_ADDRESS = "0x724dc807b04555b71ed48a6896b6F41593b8C637";
   const USDC_HOLDER_ADDRESS = "0xf89d7b9c864f589bbF53a82105107622B35EaA40";
@@ -42,13 +42,13 @@ describe("Vault and AaveStrategy", function () {
     [owner, user1, user2] = await ethers.getSigners();
 
     // Forked USDC contract and Aave Pool
-    usdc = await ethers.getContractAt("IERC20", ARBITRUM_USDC_ADDRESS);
+    usdc = await ethers.getContractAt("IERC20", BASE_USDC_ADDRESS);
     aavePool = await ethers.getContractAt("IAavePool", AAVE_POOL_ADDRESS);
     aaveToken = await ethers.getContractAt("IERC20", AAVE_RECEIPT_TOKEN_ADDRESS);
 
     // Deploy Vault contract
     const Vault = await ethers.getContractFactory("GenericVault", owner);
-    vault = await Vault.deploy("GenericVault", "GV", ARBITRUM_USDC_ADDRESS);
+    vault = await Vault.deploy("GenericVault", "GV", BASE_USDC_ADDRESS);
 
     // Deploy AaveStrategy contract and set the vault address
     const AaveStrategy = await ethers.getContractFactory("AaveStrategy", owner);

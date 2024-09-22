@@ -9,8 +9,8 @@ import BuyContainer from "../containers/BuyContainer"; // Adjust the path if nee
 import About from "../components/About"; // Adjust the path if needed
 import Image from "next/image";
 import { inAppWallet, createWallet } from "thirdweb/wallets";
-import { arbitrum } from "thirdweb/chains";
-import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "@/constants";
+import { base } from "thirdweb/chains";
+import { BASE_USDC_CONTRACT_ADDRESS } from "@/constants";
 import mixpanel from "mixpanel-browser";
 
 // Set the root element where your app is rendered
@@ -22,7 +22,7 @@ const wallets = [
     auth: {
       options: ["google", "email", "passkey"],
     },
-    smartAccount: { chain: arbitrum, sponsorGas: true } ,
+    smartAccount: { chain: base, sponsorGas: true } ,
   }),
   createWallet("io.metamask"),
   createWallet("com.coinbase.wallet"),
@@ -118,12 +118,12 @@ export default function Page() {
                 wallets={wallets}
                 connectModal={{ size: "compact" }}
                 accountAbstraction={{
-                  chain: arbitrum,
+                  chain: base,
                   sponsorGas: true,
                 }}
                 detailsButton={{
                   displayBalanceToken: {
-                    [arbitrum.id]: ARBITRUM_USDC_CONTRACT_ADDRESS,
+                    [base.id]: BASE_USDC_CONTRACT_ADDRESS,
                   },
                 }}
               />
@@ -142,7 +142,7 @@ export default function Page() {
               connectButton={{ label: "Get Started" }}
               connectModal={{ size: "compact" }}
               accountAbstraction={{
-                chain: arbitrum,
+                chain: base,
                 sponsorGas: true,
               }}
             />

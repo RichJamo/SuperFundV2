@@ -16,8 +16,8 @@ import { useReadContract } from "thirdweb/react";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { getContract } from "thirdweb";
 import { client } from "../utils/client";
-import { arbitrum } from "thirdweb/chains";
-import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { base } from "thirdweb/chains";
+import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
 import { toast } from "react-toastify";
 import mixpanel from "mixpanel-browser";
 
@@ -43,8 +43,8 @@ const VaultsContainer = () => {
 
   const contract = getContract({
     client,
-    chain: arbitrum,
-    address: ARBITRUM_USDC_CONTRACT_ADDRESS,
+    chain: base,
+    address: BASE_USDC_CONTRACT_ADDRESS,
   });
 
   async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {

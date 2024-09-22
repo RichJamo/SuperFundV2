@@ -1,7 +1,7 @@
 import { Address, getContract, prepareContractCall, sendTransaction } from "thirdweb";
 import { client } from "../utils/client";
-import { arbitrum } from "thirdweb/chains";
-import { ARBITRUM_USDC_CONTRACT_ADDRESS } from "../constants";
+import { base } from "thirdweb/chains";
+import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
 import { GENERIC_VAULT_ADDRESS } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
@@ -11,8 +11,8 @@ import { VaultData } from "../types/types";
 export const executeDeposit = async (vaultId: Address, activeAccount: Account, transactionAmount: bigint) => {
   let contract = getContract({
     client,
-    chain: arbitrum,
-    address: ARBITRUM_USDC_CONTRACT_ADDRESS
+    chain: base,
+    address: BASE_USDC_CONTRACT_ADDRESS
   });
   const approveTx = prepareContractCall({
     contract,
@@ -22,7 +22,7 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
   console.log("approveTx", approveTx);
   contract = getContract({
     client,
-    chain: arbitrum,
+    chain: base,
     address: GENERIC_VAULT_ADDRESS
   });
   const supplyTx = prepareContractCall({
@@ -41,7 +41,7 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
 export const executeWithdrawal = async (vaultId: Address, activeAccount: Account, withdrawAmount: bigint) => { //vaultId: string
   let contract = getContract({
     client,
-    chain: arbitrum,
+    chain: base,
     address: GENERIC_VAULT_ADDRESS
   });
   const withdrawTx = prepareContractCall({
@@ -59,7 +59,7 @@ export const executeWithdrawal = async (vaultId: Address, activeAccount: Account
 export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: Address) => {
   const contract = getContract({
     client,
-    chain: arbitrum,
+    chain: base,
     address: vaultAddress
   });
   const balance = await getBalance({
@@ -69,7 +69,7 @@ export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: 
   return balance?.displayValue;
 }
 
-// Assuming client, arbitrum, and ARBITRUM_USDC_CONTRACT_ADDRESS are defined elsewhere
+// Assuming client, base, and BASE_USDC_CONTRACT_ADDRESS are defined elsewhere
 
 export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]> => {
   const vaultData: VaultData[] = [];
@@ -79,8 +79,8 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       // Fetch the vault contract
       const contract = getContract({
         client,
-        chain: arbitrum,
-        address: vaultId, // This should be the vault address, not ARBITRUM_USDC_CONTRACT_ADDRESS
+        chain: base,
+        address: vaultId, // This should be the vault address, not BASE_USDC_CONTRACT_ADDRESS
       });
 
       // Fetch vault data
@@ -112,7 +112,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       // Fetch input token details
       const inputTokenContract = getContract({
         client,
-        chain: arbitrum,
+        chain: base,
         address: inputTokenAddress,
       });
       const inputTokenSymbol = await readContract({
@@ -127,7 +127,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       // Fetch output token details (from strategy)
       const strategyContract = getContract({
         client,
-        chain: arbitrum,
+        chain: base,
         address: strategyAddress,
       });
       const receiptTokenAddress = await readContract({
@@ -136,7 +136,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       });
       const receiptTokenContract = getContract({
         client,
-        chain: arbitrum,
+        chain: base,
         address: receiptTokenAddress,
       });
       const outputTokenSymbol = await readContract({
@@ -147,7 +147,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       // Placeholder for protocol details and rates as these might need to be manually added
       const protocol = {
         name: "Aave",
-        network: "Arbitrum",
+        network: "Base",
       };
 
       // const rates: Rate[] = []; // Add actual rate data fetching here if needed
