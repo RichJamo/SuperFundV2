@@ -9,7 +9,7 @@ import "./interfaces/IAavePool.sol";
 // AAVE_BASE_POOL_ADDRESS = 0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
 // AAVE_BASE_USDC_CONTRACT_ADDRESS = 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
 
-contract AaveStrategy is Ownable {
+contract BaseAaveStrategy is Ownable {
     address public vault;
 
     IERC20 public inputToken;

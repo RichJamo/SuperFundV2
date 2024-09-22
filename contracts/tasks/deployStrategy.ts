@@ -21,7 +21,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  // Fetch the vault address argument required for the AaveStrategy constructor
+  // Fetch the vault address argument required for the BaseAaveStrategy constructor
   const vault = args.vault; // This should be passed as an argument
   const inputToken = args.inputToken;
   const poolAddress = args.poolAddress;
@@ -39,13 +39,13 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     throw new Error("🚨 Receipt token address is required");
   }
 
-  // Deploy the AaveStrategy contract
-  const factory = await hre.ethers.getContractFactory("AaveStrategy");
-  const contract = await factory.deploy(vault);
+  // Deploy the BaseAaveStrategy contract
+  const factory = await hre.ethers.getContractFactory("BaseAaveStrategy");
+  const contract = await factory.deploy(vault, inputToken, poolAddress, receiptToken);
   await contract.deployed();
 
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed AaveStrategy on base.`);
+  console.log(`🚀 Successfully deployed BaseAaveStrategy on base.`);
   console.log(`📜 Contract address: ${contract.address}`);
 
   // Verify the contract on Basescan
@@ -70,7 +70,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 };
 
 // Define the Hardhat task for deployment
-task("deploy-strategy", "Deploy the AaveStrategy contract", main)
+task("deploy-strategy", "Deploy the BaseAaveStrategy contract", main)
   .addFlag("json", "Output in JSON")
   .addParam("vault", "The address of the vault")
   .addParam("inputToken", "The address of the input token")
