@@ -2,7 +2,7 @@ import { Address, getContract, prepareContractCall, sendTransaction } from "thir
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
 import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
-import { GENERIC_VAULT_ADDRESS } from "../constants";
+import { vaultId } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { sendBatchTransaction, readContract } from "thirdweb";
@@ -17,13 +17,13 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
   const approveTx = prepareContractCall({
     contract,
     method: "function approve(address to, uint256 value)",
-    params: [GENERIC_VAULT_ADDRESS, transactionAmount]
+    params: [vaultId, transactionAmount]
   });
   console.log("approveTx", approveTx);
   contract = getContract({
     client,
     chain: base,
-    address: GENERIC_VAULT_ADDRESS
+    address: vaultId
   });
   const supplyTx = prepareContractCall({
     contract,
@@ -42,7 +42,7 @@ export const executeWithdrawal = async (vaultId: Address, activeAccount: Account
   let contract = getContract({
     client,
     chain: base,
-    address: GENERIC_VAULT_ADDRESS
+    address: vaultId
   });
   const withdrawTx = prepareContractCall({
     contract,
