@@ -1,6 +1,5 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { ethers } from "hardhat";
 import * as dotenv from "dotenv";
 
 dotenv.config();  // Load environment variables from .env
@@ -24,8 +23,20 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 
   // Fetch the vault address argument required for the AaveStrategy constructor
   const vault = args.vault; // This should be passed as an argument
+  const inputToken = args.inputToken;
+  const poolAddress = args.poolAddress;
+  const receiptToken = args.receiptToken;
   if (!vault) {
     throw new Error("🚨 Vault address is required");
+  }
+  if (!inputToken) {
+    throw new Error("🚨 Input token address is required");
+  }
+  if (!poolAddress) {
+    throw new Error("🚨 Aave pool address is required");
+  }
+  if (!receiptToken) {
+    throw new Error("🚨 Receipt token address is required");
   }
 
   // Deploy the AaveStrategy contract
@@ -37,15 +48,15 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   console.log(`🚀 Successfully deployed AaveStrategy on base.`);
   console.log(`📜 Contract address: ${contract.address}`);
 
-  // Verify the contract on Arbiscan
+  // Verify the contract on Basescan
   if (network === "base" && hre.config.etherscan.apiKey.base) {
-    console.log("🛠 Verifying contract on Arbiscan...");
+    console.log("🛠 Verifying contract on Basescan...");
     try {
       await hre.run("verify:verify", {
         address: contract.address,
-        constructorArguments: [vault],
+        constructorArguments: [vault, inputToken, poolAddress, receiptToken],
       });
-      console.log(`✅ Contract verified: https://arbiscan.io/address/${contract.address}`);
+      console.log(`✅ Contract verified: https://basescan.io/address/${contract.address}`);
     } catch (err) {
       console.error("❌ Contract verification failed:", err);
     }
@@ -61,6 +72,9 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 // Define the Hardhat task for deployment
 task("deploy-strategy", "Deploy the AaveStrategy contract", main)
   .addFlag("json", "Output in JSON")
-  .addParam("vault", "The address of the vault");
+  .addParam("vault", "The address of the vault")
+  .addParam("inputToken", "The address of the input token")
+  .addParam("poolAddress", "The address of the Aave pool")
+  .addParam("receiptToken", "The address of the receipt token")
 
 export default {};

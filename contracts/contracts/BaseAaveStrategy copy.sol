@@ -5,15 +5,16 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAavePool.sol";
+// BASE_USDC_CONTRACT_ADDRESS =
+        0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
+// AAVE_BASE_POOL_ADDRESS =
+        0xA238Dd80C259a72e81d7e4664a9801593F98d1c5;
+// AAVE_BASE_USDC_CONTRACT_ADDRESS =
+        0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB;
 
 contract AaveStrategy is Ownable {
     address public vault;
-    address public constant BASE_USDC_CONTRACT_ADDRESS =
-        0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
-    address public constant AAVE_POOL_ADDRESS =
-        0x794a61358D6845594F94dc1DB02A252b5b4814aD;
-    address public constant AAVE_ARBITRUM_USDCN_CONTRACT_ADDRESS =
-        0x724dc807b04555b71ed48a6896b6F41593b8C637;
+
 
     IERC20 public inputToken;
     IAavePool public aavePool;
