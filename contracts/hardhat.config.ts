@@ -20,8 +20,8 @@ const config: HardhatUserConfig = {
       url: "https://arb1.arbitrum.io/rpc",
       accounts: [process.env.PRIVATE_KEY],
     },
-    Base: {
-      url: "wss://base-rpc.publicnode.com",
+    base: {
+      url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
       accounts: [process.env.PRIVATE_KEY],
     },
     hardhat: {
@@ -46,6 +46,16 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBISCAN_API_KEY || "", // Add your Arbiscan API key here
       base: process.env.BASESCAN_API_KEY || "", // Add your Etherscan API key here
     },
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org"
+        }
+      }
+    ],
   },
   typechain: {
     outDir: "typechain",  // This is where Typechain outputs the generated types

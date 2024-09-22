@@ -1,6 +1,5 @@
 import { task } from "hardhat/config";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
-import { ethers } from "hardhat";
 
 const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   const network = hre.network.name;
@@ -36,15 +35,15 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   console.log(`🚀 Successfully deployed GenericVault on base.`);
   console.log(`📜 Contract address: ${contract.address}`);
 
-  // Verify the contract on Arbiscan
+  // Verify the contract on Basescan
   if (network === "base" && hre.config.etherscan.apiKey.base) {
-    console.log("🛠 Verifying contract on Arbiscan...");
+    console.log("🛠 Verifying contract on Basescan...");
     try {
       await hre.run("verify:verify", {
         address: contract.address,
         constructorArguments: [name, symbol, assetaddress],
       });
-      console.log(`✅ Contract verified: https://arbiscan.io/address/${contract.address}`);
+      console.log(`✅ Contract verified: https://basescan.org/address/${contract.address}`);
     } catch (err) {
       console.error("❌ Contract verification failed:", err);
     }
