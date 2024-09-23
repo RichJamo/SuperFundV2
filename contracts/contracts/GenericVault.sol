@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IAaveStrategy.sol";
+import "./interfaces/IStrategy.sol";
 /**
  * @dev Implementation of the ERC4626 "Tokenized Vault Standard" as defined in
  * https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
@@ -115,7 +115,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         uint256 usdcBalance = _asset.balanceOf(address(this));
 
         // Call the strategy to get the equivalent value of aArbUSDC in terms of USDC
-        uint256 strategyUSDCValue = IAaveStrategy(strategyAddress)
+        uint256 strategyUSDCValue = IStrategy(strategyAddress)
             .totalUnderlyingAssets();
 
         // Return the total assets: USDC held in the vault + USDC equivalent held in the strategy
@@ -211,7 +211,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
 
     function allocateToStrategy(uint256 amount) private {
         _asset.approve(strategyAddress, amount);
-        IAaveStrategy(strategyAddress).invest(amount);
+        IStrategy(strategyAddress).invest(amount);
     }
 
     /** @dev See {IERC4626-mint}.
@@ -245,7 +245,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         );
 
         uint256 shares = previewWithdraw(assets);
-        IAaveStrategy(strategyAddress).withdraw(assets);
+        IStrategy(strategyAddress).withdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return shares;
@@ -262,7 +262,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
-        IAaveStrategy(strategyAddress).withdraw(assets);
+        IStrategy(strategyAddress).withdraw(assets);
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;

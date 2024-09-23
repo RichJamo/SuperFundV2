@@ -1,7 +1,7 @@
 import { Address, getContract, prepareContractCall, sendTransaction } from "thirdweb";
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
-import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
+import { BASE_USDC_ADDRESS } from "../constants";
 import { vaultId } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
@@ -12,7 +12,7 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
   let contract = getContract({
     client,
     chain: base,
-    address: BASE_USDC_CONTRACT_ADDRESS
+    address: BASE_USDC_ADDRESS
   });
   const approveTx = prepareContractCall({
     contract,
@@ -69,7 +69,7 @@ export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: 
   return balance?.displayValue;
 }
 
-// Assuming client, base, and BASE_USDC_CONTRACT_ADDRESS are defined elsewhere
+// Assuming client, base, and BASE_USDC_ADDRESS are defined elsewhere
 
 export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]> => {
   const vaultData: VaultData[] = [];
@@ -80,7 +80,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       const contract = getContract({
         client,
         chain: base,
-        address: vaultId, // This should be the vault address, not BASE_USDC_CONTRACT_ADDRESS
+        address: vaultId, // This should be the vault address, not BASE_USDC_ADDRESS
       });
 
       // Fetch vault data

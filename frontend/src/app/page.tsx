@@ -10,7 +10,7 @@ import About from "../components/About"; // Adjust the path if needed
 import Image from "next/image";
 import { inAppWallet, createWallet } from "thirdweb/wallets";
 import { base } from "thirdweb/chains";
-import { BASE_USDC_CONTRACT_ADDRESS } from "@/constants";
+import { BASE_USDC_ADDRESS } from "@/constants";
 import mixpanel from "mixpanel-browser";
 
 // Set the root element where your app is rendered
@@ -123,7 +123,7 @@ export default function Page() {
                 }}
                 detailsButton={{
                   displayBalanceToken: {
-                    [base.id]: BASE_USDC_CONTRACT_ADDRESS,
+                    [base.id]: BASE_USDC_ADDRESS,
                   },
                 }}
               />

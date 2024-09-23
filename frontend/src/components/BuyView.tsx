@@ -2,7 +2,7 @@ import React from "react";
 import { PayEmbed } from "thirdweb/react";
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
-import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
+import { BASE_USDC_ADDRESS } from "../constants";
 import { truncate } from "fs/promises";
 
 const BuyView: React.FC = ({}) => {
@@ -16,7 +16,7 @@ const BuyView: React.FC = ({}) => {
         mode: "fund_wallet",
         prefillBuy: {
           token: {
-            address: BASE_USDC_CONTRACT_ADDRESS,
+            address: BASE_USDC_ADDRESS,
             name: "Base USDC",
             symbol: "USDC",
             icon: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
@@ -36,7 +36,7 @@ const BuyView: React.FC = ({}) => {
             },
             chain: base,
             // token: {
-            //   address: BASE_USDC_CONTRACT_ADDRESS,
+            //   address: BASE_USDC_ADDRESS,
             //   name: "Base USDC",
             //   symbol: "USDC",
             // }
