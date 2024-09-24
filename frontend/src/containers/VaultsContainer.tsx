@@ -1,24 +1,24 @@
 import { useState, useEffect } from "react";
-import { fetchVaultDataRPC } from "../actions/actions";
 import { formatTotalAssets } from "../utils/utils";
 import {
   executeDeposit,
   executeWithdrawal,
   fetchUserVaultBalance,
+  fetchVaultDataRPC
 } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { FormattedVault, VaultData } from "../types/types";
 import { VAULT_IDS, BASE_USDC_ADDRESS } from "../constants/index";
-import { Address } from "thirdweb";
+import { Address, getContract } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
 import { useReadContract } from "thirdweb/react";
 import { getBalance } from "thirdweb/extensions/erc20";
-import { getContract } from "thirdweb";
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
 import { toast } from "react-toastify";
 import mixpanel from "mixpanel-browser";
+import { useQueryClient } from "@tanstack/react-query";
 
 const VaultsContainer = () => {
   const [vaults, setVaults] = useState<FormattedVault[]>([]);
@@ -27,7 +27,8 @@ const VaultsContainer = () => {
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
 
   const EOAaccount = useActiveAccount();
-  
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     if (EOAaccount) {
       setActiveAccount(EOAaccount);
@@ -88,6 +89,7 @@ const VaultsContainer = () => {
       });
       console.log("Transaction confirmed")
       toast.success("Transaction confirmed");
+      queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
@@ -121,6 +123,7 @@ const VaultsContainer = () => {
         amount: scaledAmount.toString(),
       });
       toast.success("Transaction confirmed");
+      queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
       updateUserVaultBalances(vaults);
     } catch (error) {
@@ -159,13 +162,6 @@ const VaultsContainer = () => {
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
           const { id, name, protocol, inputToken, outputToken, totalValueLockedUSD, APY7d } =
             vaultData;
-  
-          // const lenderVariableRate = rates.find(
-          //   (rate) => rate.type === "VARIABLE" && rate.id.startsWith("LENDER")
-          // );
-          // const borrowerVariableRate = rates.find(
-          //   (rate) => rate.type === "VARIABLE" && rate.id.startsWith("BORROWER")
-          // );
   
           return {
             id,

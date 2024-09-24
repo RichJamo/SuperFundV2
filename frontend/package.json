@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.56.2",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.5",
     "ethers": "^6.13.2",
