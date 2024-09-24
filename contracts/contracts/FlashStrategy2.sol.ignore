@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "./interfaces/IAavePool.sol";
+import "./interfaces/IFlashLoanReceiver.sol";
+import "./interfaces/IPoolAddressesProvider.sol";
+
+contract FlashLoanDeposit is IFlashLoanReceiver, Ownable {
+    address public vault;
+    address public constant ARB_AAVE_POOL_ADDRESS =
+        0x794a61358D6845594F94dc1DB02A252b5b4814aD;
+    address public constant AAVE_USDC_ADDRESS =
+        0xaf88d065e77c8cC2239327C5EDb3A432268e5831; // Aave USDC token
+
+    IERC20 public usdc;
+    IAavePool public aavePool;
+
+    constructor(address _vault) {
+        vault = _vault;
+        usdc = IERC20(AAVE_USDC_ADDRESS);
+        aavePool = IAavePool(ARB_AAVE_POOL_ADDRESS);
+    }
+
+    modifier onlyVault() {
+        require(msg.sender == vault, "Only vault can call");
+        _;
+    }
+
+    function initiateFlashLoan(
+        address asset,
+        uint256 depositAmount
+    ) external onlyOwner {
+        // Calculate the flash loan amount such that F = 0.7 * (D + F)
+        uint256 flashLoanAmount = (depositAmount * 70) / 30; // F = 0.7 * (D + F)
+
+        // Set up arrays for flash loan call
+        address[] memory assets = new address[](1);
+        assets[0] = asset;
+
+        uint256[] memory amounts = new uint256[](1);
+        amounts[0] = flashLoanAmount;
+
+        uint256[] memory modes = new uint256[](1);
+        modes[0] = 0; // No debt, repay in the same transaction
+
+        // Initiate flash loan
+        IPoolAddressesProvider provider = IPoolAddressesProvider(
+            ARB_AAVE_POOL_ADDRESS
+        );
+        address lendingPool = provider.getPool();
+        IAavePool(lendingPool).flashLoan(
+            address(this),
+            assets,
+            amounts,
+            modes,
+            address(this),
+            abi.encode(depositAmount),
+            0
+        );
+    }
+
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    ) external override returns (bool) {
+        uint256 depositAmount = abi.decode(params, (uint256));
+        uint256 loanAmount = amounts[0];
+        uint256 totalAmount = depositAmount + loanAmount; // Total deposited in Aave
+        uint256 fee = premiums[0];
+
+        // Approve Aave pool to spend USDC
+        usdc.approve(ARB_AAVE_POOL_ADDRESS, totalAmount);
+
+        // Deposit total amount (deposit + flash loan) into Aave as collateral
+        aavePool.supply(address(usdc), totalAmount, address(this), 0);
+
+        // Borrow 70% of the deposited amount to repay the flash loan
+        uint256 borrowAmount = (totalAmount * 70) / 100;
+        aavePool.borrow(address(usdc), borrowAmount, 2, 0, address(this)); // 2 = variable interest rate
+
+        // Repay flash loan + fee
+        uint256 totalDebt = loanAmount + fee;
+        usdc.approve(ARB_AAVE_POOL_ADDRESS, totalDebt);
+        usdc.transfer(msg.sender, totalDebt); // Repay the flash loan
+
+        return true;
+    }
+
+    function emergencyWithdraw(address _token) external onlyOwner {
+        uint256 balance = IERC20(_token).balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        SafeERC20.safeTransfer(IERC20(_token), owner(), balance);
+    }
+
+    receive() external payable {}
+}
