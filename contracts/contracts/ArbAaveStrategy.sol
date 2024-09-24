@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IAavePool.sol";
 
 contract AaveStrategy is Ownable {
-    address public vault;
+    address public amanaVault;
     address public constant ARB_USDC_CONTRACT_ADDRESS =
         0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address public constant ARB_AAVE_POOL_ADDRESS =
@@ -19,15 +19,15 @@ contract AaveStrategy is Ownable {
     IAavePool public aavePool;
     IERC20 public aaveReceiptToken;
 
-    constructor(address _vault) {
-        vault = _vault;
+    constructor(address _amanaVault) {
+        amanaVault = _amanaVault;
         usdc = IERC20(ARB_USDC_CONTRACT_ADDRESS);
         aavePool = IAavePool(ARB_AAVE_POOL_ADDRESS);
         aaveReceiptToken = IERC20(AAVE_ARBITRUM_USDCN_CONTRACT_ADDRESS);
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, "Only vault can call");
+        require(msg.sender == amanaVault, "Only amanaVault can call");
         _;
     }
 
