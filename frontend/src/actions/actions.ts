@@ -69,7 +69,6 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
     method: "function approve(address to, uint256 value)",
     params: [vaultId, transactionAmount]
   });
-  console.log("approveTx", approveTx);
   contract = getContract({
     client,
     chain: base,
@@ -81,7 +80,6 @@ export const executeDeposit = async (vaultId: Address, activeAccount: Account, t
       "function deposit(uint256 assets,  address receiver)",
     params: [transactionAmount, activeAccount?.address]
   });
-  console.log("supplyTx", supplyTx);
   await sendBatchTransaction({
     account: activeAccount,
     transactions: [approveTx, supplyTx]
@@ -112,11 +110,31 @@ export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: 
     chain: base,
     address: vaultAddress
   });
-  const balance = await getBalance({
+  const { value: shares, decimals } = await getBalance({
     contract,
     address: userAddress
   });
-  return balance?.displayValue;
+  const balance = await readContract({
+    contract,
+    method: "function convertToAssets(uint256) view returns (uint256)",
+    params: [shares]
+  });
+  const formattedBalance = Number(balance) / 10 ** decimals;
+  return formattedBalance.toString();
+}
+
+export const fetchTotalAssets = async (vaultAddress: Address) => {
+  const contract = getContract({
+    client,
+    chain: base,
+    address: vaultAddress
+  });
+  const balance = await readContract({
+    contract,
+    method: "function totalAssets() view returns (uint256)"
+  });
+  const formattedBalance = Number(balance) / 10 ** 6; // TODO fetch decimals dynamically
+  return formattedBalance.toString();
 }
 
 export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]> => {
@@ -137,11 +155,6 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         method: "function name() view returns (string)",
       });
 
-      // const symbol = await readContract({
-      //   contract,
-      //   method: "function symbol() view returns (string)",
-      // });
-
       const inputTokenAddress = await readContract({
         contract,
         method: "function asset() view returns (address)",
@@ -151,12 +164,10 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         contract,
         method: "function strategyAddress() view returns (address)",
       });
-      console.log("strategyAddress", strategyAddress);
       const totalValueLockedUSD = await readContract({
         contract,
         method: "function totalAssets() view returns (uint256)",
       });
-      console.log("totalValueLockedUSD", totalValueLockedUSD);
       // Fetch input token details
       const inputTokenContract = getContract({
         client,
@@ -186,14 +197,11 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         name: "Unknown",
         network: "Unknown",
       };
-      console.log("got here")
       if (vaultId === "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d") {
         const receiptTokenAddress = await readContract({
           contract: strategyContract,
           method: "function aaveReceiptToken() view returns (address)",
         });
-
-        console.log("receiptTokenAddress", receiptTokenAddress);
 
         const receiptTokenContract = getContract({
           client,
@@ -223,8 +231,6 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
           contract: strategyContract,
           method: "function receiptToken() view returns (address)",
         });
-
-        console.log("receiptTokenAddress", receiptTokenAddress);
 
         const receiptTokenContract = getContract({
           client,

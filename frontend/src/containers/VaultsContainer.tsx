@@ -4,8 +4,9 @@ import {
   executeDeposit,
   executeWithdrawal,
   fetchUserVaultBalance,
-  fetchVaultDataRPC
-} from "../actions/actions";
+  fetchVaultDataRPC,
+  fetchTotalAssets
+  } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { FormattedVault, VaultData } from "../types/types";
 import { VAULT_IDS, BASE_USDC_ADDRESS } from "../constants/index";
@@ -41,13 +42,13 @@ const VaultsContainer = () => {
     throw new Error("No active account found");
   }
 
-  const contract = getContract({
+  const usdcContract = getContract({
     client,
     chain: base,
     address: BASE_USDC_ADDRESS,
   });
 
-  async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {
+  async function updateVaultBalances(formattedVaults: FormattedVault[]) {
     // Create a new array with updated vault balances
     const updatedVaults = await Promise.all(
       formattedVaults.map(async (vault) => {
@@ -56,14 +57,14 @@ const VaultsContainer = () => {
             activeAccount?.address as Address,
             vault.id as Address
           );
-          return { ...vault, userBalance: balance }; // Return updated vault
+          const newTotalAssets = await fetchTotalAssets(vault.id as Address);
+          return { ...vault, userBalance: balance, totalAssets: newTotalAssets}; // Return updated vault
         } catch (error) {
-          console.error(`Error fetching balance for vault ${vault.id}:`, error);
-          return { ...vault, userBalance: "Error" }; // Handle error
+          console.error(`Error fetching balances for vault ${vault.id}:`, error);
+          return { ...vault, userBalance: "Error", totalAssets: "Error" }; // Handle error
         }
       })
     );
-  
     // Update the state with the new array
     setVaults(updatedVaults);
   }
@@ -87,11 +88,10 @@ const VaultsContainer = () => {
         vault: vaultId.toString(),
         amount: scaledAmount.toString(),
       });
-      console.log("Transaction confirmed")
       toast.success("Transaction confirmed");
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
-      updateUserVaultBalances(vaults);
+      updateVaultBalances(vaults);
     } catch (error) {
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
@@ -125,7 +125,7 @@ const VaultsContainer = () => {
       toast.success("Transaction confirmed");
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
-      updateUserVaultBalances(vaults);
+      updateVaultBalances(vaults);
     } catch (error) {
       mixpanel.track("Withdraw Failed", {
         vault: vaultId.toString(),
@@ -144,7 +144,7 @@ const VaultsContainer = () => {
     error,
     refetch,
   } = useReadContract(getBalance, {
-    contract,
+    contract: usdcContract,
     address: activeAccount?.address as Address,
   });
   
@@ -154,7 +154,7 @@ const VaultsContainer = () => {
     ? "Error"
     : usdcBalanceResult?.displayValue || "N/A";
 
-    useEffect(() => {
+  useEffect(() => {
     async function init() {
       try {
         const data: VaultData[] = await fetchVaultDataRPC(VAULT_IDS); // this currently gets data from the subgraph
@@ -182,7 +182,7 @@ const VaultsContainer = () => {
         setVaults(formattedVaults);
   
         // Fetch user balances after setting the vaults
-        await updateUserVaultBalances(formattedVaults);
+        await updateVaultBalances(formattedVaults);
       } catch (error) {
         console.error("Error initializing data:", error);
       } finally {
