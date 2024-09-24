@@ -56,11 +56,11 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Deploy Vault contract
       const Vault = await ethers.getContractFactory("GenericVault", owner);
-      amanaVault = await Vault.deploy("GenericVault", "GV", BASE_USDC_ADDRESS);
+      amanaVault = await Vault.deploy("AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS);
 
       // Deploy BaseAaveStrategy contract and set the amanaVault address
       const BaseAaveStrategy = await ethers.getContractFactory("BaseAaveStrategy", owner);
-      strategy = await BaseAaveStrategy.deploy(amanaVault.address, BASE_USDC_ADDRESS, BASE_AAVE_POOL_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
+      strategy = await BaseAaveStrategy.deploy("AaveV3USDC", amanaVault.address, BASE_USDC_ADDRESS, BASE_AAVE_POOL_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
 
       // Set the strategy address in the amanaVault
       await amanaVault.setStrategy(strategy.address);

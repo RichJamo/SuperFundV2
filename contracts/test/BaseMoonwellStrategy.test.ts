@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { Contract, Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
@@ -8,8 +8,6 @@ import { IERC4626 } from "../typechain-types";
 import { BASE_USDC_ADDRESS } from "../../frontend/src/constants/index";
 import { MOONWELL_BASE_USDC_VAULT_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_USDC_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
-import { BigNumber } from "ethers";
-import { deposit } from "@zetachain/toolkit/client";
 
 describe("Vault and BaseMoonwellStrategy", function () {
   let amanaVault: Contract;
@@ -52,11 +50,11 @@ describe("Vault and BaseMoonwellStrategy", function () {
 
       // Deploy Vault contract
       const Vault = await ethers.getContractFactory("GenericVault", owner);
-      amanaVault = await Vault.deploy("GenericVault", "GV", BASE_USDC_ADDRESS);
+      amanaVault = await Vault.deploy("MoonwellUSDCVault", "MWV", BASE_USDC_ADDRESS);
 
       // Deploy BaseMoonwellStrategy contract and set the amanaVault address
       const BaseMoonwellStrategy = await ethers.getContractFactory("BaseMoonwellStrategy", owner);
-      strategy = await BaseMoonwellStrategy.deploy(amanaVault.address, BASE_USDC_ADDRESS, MOONWELL_BASE_USDC_VAULT_ADDRESS);
+      strategy = await BaseMoonwellStrategy.deploy("MoonwellUSDC", amanaVault.address, BASE_USDC_ADDRESS, MOONWELL_BASE_USDC_VAULT_ADDRESS);
 
       // Set the strategy address in the amanaVault
       await amanaVault.setStrategy(strategy.address);
