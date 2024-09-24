@@ -119,7 +119,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     {vault.totalAssets}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">{vault.apy7d}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">{(Number(vault.apy7d) * 100).toFixed(2)}%</td>
                   <td className="px-4 py-4 whitespace-nowrap">
                   {Number(vault.userBalance) > 0 ? `$ ${Number(vault.userBalance).toFixed(2)}` : "N/A"}
                   </td>

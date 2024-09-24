@@ -2,11 +2,61 @@ import { Address, getContract, prepareContractCall, sendTransaction } from "thir
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
 import { BASE_USDC_ADDRESS } from "../constants";
-import { vaultId } from "../constants";
 import { Account } from "thirdweb/wallets";
 import { getBalance } from "thirdweb/extensions/erc20";
 import { sendBatchTransaction, readContract } from "thirdweb";
 import { VaultData } from "../types/types";
+import { ethers, JsonRpcProvider } from "ethers";
+import lendingPoolABI from "../../abis/lendingPoolABI.json";
+import moonwellVaultABI from "../../abis/moonwellVaultABI.json";
+
+import * as dotenv from "dotenv";
+dotenv.config();
+const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL_BASE);
+
+async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: Address) {
+  const aaveLendingPool = new ethers.Contract(poolAddress, lendingPoolABI, provider);
+
+  const averageBlockTimeInSeconds = 2;
+  const secondsInADay = 24 * 60 * 60;
+  const secondsIn7Days = 7 * secondsInADay;
+
+  const currentBlockNumber = await provider.getBlockNumber();
+  const blocksIn7Days = Math.floor(secondsIn7Days / averageBlockTimeInSeconds);
+  const pastBlockNumber = BigInt(currentBlockNumber - blocksIn7Days);
+
+  const reserveData = await aaveLendingPool.getReserveData(inputTokenAddress);
+  const currentLiquidityIndex = ethers.toBigInt(reserveData.liquidityIndex);
+
+  const pastReserveData = await aaveLendingPool.getReserveData(inputTokenAddress, { blockTag: pastBlockNumber });
+  const pastLiquidityIndex = ethers.toBigInt(pastReserveData.liquidityIndex);
+
+  const rateOfChange = (currentLiquidityIndex - pastLiquidityIndex) * 10n ** 18n / pastLiquidityIndex;
+  const normalizedRateOfChange = Number(rateOfChange) / Number(10n ** 18n);
+
+  return Math.pow(1 + normalizedRateOfChange, 365 / 7) - 1;
+}
+
+async function calculateMoonwellAPY(receiptTokenAddress: Address, inputTokenAddress: Address) {
+  const moonwellVault = new ethers.Contract(receiptTokenAddress, moonwellVaultABI, provider);
+
+  const averageBlockTimeInSeconds = 2;
+  const secondsInADay = 24 * 60 * 60;
+  const secondsIn7Days = 7 * secondsInADay;
+
+  const currentBlockNumber = await provider.getBlockNumber();
+  const blocksIn7Days = Math.floor(secondsIn7Days / averageBlockTimeInSeconds);
+  const pastBlockNumber = BigInt(currentBlockNumber - blocksIn7Days);
+
+  const currentPrice = ethers.toBigInt(await moonwellVault.convertToAssets(BigInt(1e18)));
+
+  const pastPrice = ethers.toBigInt(await moonwellVault.convertToAssets(BigInt(1e18), { blockTag: pastBlockNumber }));
+
+  const rateOfChange = (currentPrice - pastPrice) * 10n ** 18n / pastPrice;
+  const normalizedRateOfChange = Number(rateOfChange) / Number(10n ** 18n);
+
+  return Math.pow(1 + normalizedRateOfChange, 365 / 7) - 1;
+}
 
 export const executeDeposit = async (vaultId: Address, activeAccount: Account, transactionAmount: bigint) => {
   let contract = getContract({
@@ -69,8 +119,6 @@ export const fetchUserVaultBalance = async (userAddress: Address, vaultAddress: 
   return balance?.displayValue;
 }
 
-// Assuming client, base, and BASE_USDC_ADDRESS are defined elsewhere
-
 export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]> => {
   const vaultData: VaultData[] = [];
 
@@ -80,7 +128,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
       const contract = getContract({
         client,
         chain: base,
-        address: vaultId, // This should be the vault address, not BASE_USDC_ADDRESS
+        address: vaultId,
       });
 
       // Fetch vault data
@@ -103,22 +151,24 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         contract,
         method: "function strategyAddress() view returns (address)",
       });
-
+      console.log("strategyAddress", strategyAddress);
       const totalValueLockedUSD = await readContract({
         contract,
         method: "function totalAssets() view returns (uint256)",
       });
-
+      console.log("totalValueLockedUSD", totalValueLockedUSD);
       // Fetch input token details
       const inputTokenContract = getContract({
         client,
         chain: base,
         address: inputTokenAddress,
       });
+
       const inputTokenSymbol = await readContract({
         contract: inputTokenContract,
         method: "function symbol() view returns (string)",
       });
+
       const inputTokenDecimals = await readContract({
         contract: inputTokenContract,
         method: "function decimals() view returns (uint8)",
@@ -130,28 +180,72 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         chain: base,
         address: strategyAddress,
       });
-      const receiptTokenAddress = await readContract({
-        contract: strategyContract,
-        method: "function aaveReceiptToken() view returns (address)",
-      });
-      const receiptTokenContract = getContract({
-        client,
-        chain: base,
-        address: receiptTokenAddress,
-      });
-      const outputTokenSymbol = await readContract({
-        contract: receiptTokenContract,
-        method: "function symbol() view returns (string)",
-      });
-
-      // Placeholder for protocol details and rates as these might need to be manually added
-      const protocol = {
-        name: "Aave",
-        network: "Base",
+      let outputTokenSymbol = "";
+      let APY7d = 0;
+      let protocol = {
+        name: "Unknown",
+        network: "Unknown",
       };
+      console.log("got here")
+      if (vaultId === "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d") {
+        const receiptTokenAddress = await readContract({
+          contract: strategyContract,
+          method: "function aaveReceiptToken() view returns (address)",
+        });
 
-      // const rates: Rate[] = []; // Add actual rate data fetching here if needed
-      // Push the fetched data into the result array
+        console.log("receiptTokenAddress", receiptTokenAddress);
+
+        const receiptTokenContract = getContract({
+          client,
+          chain: base,
+          address: receiptTokenAddress,
+        });
+
+        outputTokenSymbol = await readContract({
+          contract: receiptTokenContract,
+          method: "function symbol() view returns (string)",
+        });
+
+        const poolAddress = await readContract({
+          contract: receiptTokenContract,
+          method: "function POOL() view returns (address)",
+        });
+
+        APY7d = await calculateAaveAPY(poolAddress as Address, inputTokenAddress as Address);
+
+        // Placeholder for protocol details and rates as these might need to be manually added
+        protocol = {
+          name: "Aave",
+          network: "Base",
+        };
+      } else {
+        const receiptTokenAddress = await readContract({
+          contract: strategyContract,
+          method: "function receiptToken() view returns (address)",
+        });
+
+        console.log("receiptTokenAddress", receiptTokenAddress);
+
+        const receiptTokenContract = getContract({
+          client,
+          chain: base,
+          address: receiptTokenAddress,
+        });
+
+        outputTokenSymbol = await readContract({
+          contract: receiptTokenContract,
+          method: "function symbol() view returns (string)",
+        });
+
+
+        APY7d = await calculateMoonwellAPY(receiptTokenAddress as Address, inputTokenAddress as Address);
+
+        // Placeholder for protocol details and rates as these might need to be manually added
+        protocol = {
+          name: "Moonwell",
+          network: "Base",
+        };
+      }
       vaultData.push({
         id: vaultId,
         name,
@@ -164,6 +258,7 @@ export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]
         },
         protocol,
         totalValueLockedUSD: totalValueLockedUSD.toString(),
+        APY7d
       });
     } catch (error) {
       console.error(`Error fetching data for vault ${vaultId}:`, error);

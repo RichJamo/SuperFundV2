@@ -49,6 +49,7 @@ export interface VaultData {
   }
   name: string;
   totalValueLockedUSD: string;
+  APY7d: number;
 }
 
 export interface FormattedVault {

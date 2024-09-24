@@ -8,7 +8,7 @@ import {
 } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { FormattedVault, VaultData } from "../types/types";
-import { VAULT_IDS } from "../constants/index";
+import { VAULT_IDS, BASE_USDC_ADDRESS } from "../constants/index";
 import { Address } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
@@ -17,7 +17,6 @@ import { getBalance } from "thirdweb/extensions/erc20";
 import { getContract } from "thirdweb";
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
-import { BASE_USDC_CONTRACT_ADDRESS } from "../constants";
 import { toast } from "react-toastify";
 import mixpanel from "mixpanel-browser";
 
@@ -44,7 +43,7 @@ const VaultsContainer = () => {
   const contract = getContract({
     client,
     chain: base,
-    address: BASE_USDC_CONTRACT_ADDRESS,
+    address: BASE_USDC_ADDRESS,
   });
 
   async function updateUserVaultBalances(formattedVaults: FormattedVault[]) {
@@ -158,7 +157,7 @@ const VaultsContainer = () => {
         const data: VaultData[] = await fetchVaultDataRPC(VAULT_IDS); // this currently gets data from the subgraph
   
         const formattedVaults: FormattedVault[] = data.map((vaultData) => {
-          const { id, name, protocol, inputToken, outputToken, totalValueLockedUSD } =
+          const { id, name, protocol, inputToken, outputToken, totalValueLockedUSD, APY7d } =
             vaultData;
   
           // const lenderVariableRate = rates.find(
@@ -179,7 +178,7 @@ const VaultsContainer = () => {
               : "N/A",
             previewPPS: "N/A",
             pricePerVaultShare: "N/A",
-            apy7d: "N/A",
+            apy7d: APY7d,
             userBalance: "N/A",
           };
         });
