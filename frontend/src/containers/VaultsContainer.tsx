@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
-import { formatTotalAssets } from "../utils/utils";
 import {
   executeDeposit,
   executeWithdrawal,
   fetchUserVaultBalance,
-  fetchVaultDataRPC,
   fetchTotalAssets
   } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
-import { FormattedVault, VaultData } from "../types/types";
-import { VAULT_IDS, BASE_USDC_ADDRESS } from "../constants/index";
+import { VaultData, VaultAPY, UserVaultBalance, VaultTotalAssets } from "../types/types";
+import { VAULT_DATA, BASE_USDC_ADDRESS } from "../constants/index";
 import { Address, getContract } from "thirdweb";
 import { useActiveAccount } from "thirdweb/react";
 import { Account } from "thirdweb/wallets";
@@ -20,13 +18,17 @@ import { base } from "thirdweb/chains";
 import { toast } from "react-toastify";
 import mixpanel from "mixpanel-browser";
 import { useQueryClient } from "@tanstack/react-query";
+import { useUpdateUserVaultBalances, useUpdateVaultTotalAssets, useUpdateAPYs } from "@/hooks/hooks";
 
 const VaultsContainer = () => {
-  const [vaults, setVaults] = useState<FormattedVault[]>([]);
   const [transactionAmount, setTransactionAmount] = useState("1");
   const [loading, setLoading] = useState<boolean>(true);
   const [activeAccount, setActiveAccount] = useState<Account | null>(null);
+  const [vaultAPYs, setVaultAPYs] = useState<VaultAPY[]>([]);
+  const [userVaultBalances, setUserVaultBalances] = useState<UserVaultBalance[]>([]);
+  const [vaultTotalAssets, setVaultTotalAssets] = useState<VaultTotalAssets[]>([]);
 
+  const vaults: VaultData[] = VAULT_DATA;
   const EOAaccount = useActiveAccount();
   const queryClient = useQueryClient();
 
@@ -48,27 +50,9 @@ const VaultsContainer = () => {
     address: BASE_USDC_ADDRESS,
   });
 
-  async function updateVaultBalances(formattedVaults: FormattedVault[]) {
-    // Create a new array with updated vault balances
-    const updatedVaults = await Promise.all(
-      formattedVaults.map(async (vault) => {
-        try {
-          const balance = await fetchUserVaultBalance(
-            activeAccount?.address as Address,
-            vault.id as Address
-          );
-          const newTotalAssets = await fetchTotalAssets(vault.id as Address);
-          return { ...vault, userBalance: balance, totalAssets: newTotalAssets}; // Return updated vault
-        } catch (error) {
-          console.error(`Error fetching balances for vault ${vault.id}:`, error);
-          return { ...vault, userBalance: "Error", totalAssets: "Error" }; // Handle error
-        }
-      })
-    );
-    // Update the state with the new array
-    setVaults(updatedVaults);
-  }
-  
+  useUpdateUserVaultBalances(vaults, EOAaccount, setUserVaultBalances, setLoading);
+  useUpdateVaultTotalAssets(vaults, setVaultTotalAssets, EOAaccount, setLoading);
+  useUpdateAPYs(vaults, setVaultAPYs, setLoading);
 
   const handleDepositTransaction = async (vaultId: Address) => {
     try {
@@ -84,14 +68,18 @@ const VaultsContainer = () => {
         EOAaccount,
         scaledAmount, //TODO make this general for all tokens?
       );
+      console.log("1")
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
         amount: scaledAmount.toString(),
       });
+      console.log("2")
       toast.success("Transaction confirmed");
-      queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
-      refetch();
-      updateVaultBalances(vaults);
+      console.log("3")
+      queryClient.invalidateQueries({ queryKey: ["walletBalance"] }); //makes sure the wallet updates
+      console.log("4")
+      refetch(); //refetches usdc balance of user
+      console.log("6")
     } catch (error) {
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
@@ -122,10 +110,14 @@ const VaultsContainer = () => {
         vault: vaultId.toString(),
         amount: scaledAmount.toString(),
       });
+      console.log("1")
       toast.success("Transaction confirmed");
+      console.log("2")
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
+      console.log("3")
       refetch();
-      updateVaultBalances(vaults);
+      console.log("4")
+      console.log("5")
     } catch (error) {
       mixpanel.track("Withdraw Failed", {
         vault: vaultId.toString(),
@@ -153,48 +145,7 @@ const VaultsContainer = () => {
     : error
     ? "Error"
     : usdcBalanceResult?.displayValue || "N/A";
-
-  useEffect(() => {
-    async function init() {
-      try {
-        const data: VaultData[] = await fetchVaultDataRPC(VAULT_IDS); // this currently gets data from the subgraph
-  
-        const formattedVaults: FormattedVault[] = data.map((vaultData) => {
-          const { id, name, protocol, inputToken, outputToken, totalValueLockedUSD, APY7d } =
-            vaultData;
-  
-          return {
-            id,
-            protocol: protocol.name,
-            name: name || "Unnamed Vault",
-            symbol: outputToken.symbol || "N/A",
-            chain: protocol.network,
-            totalAssets: totalValueLockedUSD
-              ? formatTotalAssets(totalValueLockedUSD, inputToken.decimals)
-              : "N/A",
-            previewPPS: "N/A",
-            pricePerVaultShare: "N/A",
-            apy7d: APY7d,
-            userBalance: "N/A",
-          };
-        });
-  
-        setVaults(formattedVaults);
-  
-        // Fetch user balances after setting the vaults
-        await updateVaultBalances(formattedVaults);
-      } catch (error) {
-        console.error("Error initializing data:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (activeAccount) {
-      init();
-    }
-  }, [activeAccount]);
-  
-
+    
   const handleUserChange = (username: string) => {
   };
 
@@ -202,6 +153,9 @@ const VaultsContainer = () => {
     <VaultsView
       loading={loading}
       vaults={vaults}
+      vaultAPYs={vaultAPYs}
+      userVaultBalances={userVaultBalances}
+      vaultTotalAssets={vaultTotalAssets}
       transactionAmount={transactionAmount}
       setTransactionAmount={setTransactionAmount}
       depositTransaction={handleDepositTransaction}

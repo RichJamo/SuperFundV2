@@ -1,4 +1,4 @@
-// Define contract addresses and other constants here
+import { VaultData } from "../types";
 
 export const OPTIMISM_USDC_CONTRACT_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
 export const ARB_USDC_CONTRACT_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
@@ -13,12 +13,41 @@ export const BASE_AAVE_RECEIPT_TOKEN_ADDRESS = "0x4e65fE4DbA92790696d040ac24Aa41
 export const BASE_USDC_HOLDER_ADDRESS = "0xF977814e90dA44bFA03b6295A0616a897441aceC"
 export const MOONWELL_BASE_USDC_VAULT_ADDRESS = "0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca";
 
-export const VAULT_IDS = [
-  // "0x794a61358D6845594F94dc1DB02A252b5b4814aD", // what I originally had for the AAVE USDC pool
-  // "0x724dc807b04555b71ed48a6896b6F41593b8C637", // what I got from the subgraph (this is the AToken)
-  // "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5"
-  // "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486" //USDC vault on Arbitrum
-  "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Aave Vault deployed on Base
-  "0x383a344C32c0787BAfea507b1D19097Ad049D7eD" // Generic Moonwell Vault deployed on Base
+export const VAULT_DATA: VaultData[] = [
+  {
+    id: "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Aave Vault on Base
+    inputToken: {
+      symbol: "USDC",
+      decimals: 6,
+      address: BASE_USDC_ADDRESS,
+    },
+    receiptToken: { //maybe shouldn't even have this here - it's confusing - this is set on strategy!
+      symbol: "aUSDC",
+    },
+    protocol: {
+      name: "Aave",
+      network: "Base",
+    },
+    name: "AaveV3 USDC",
+  },
+  {
+    id: "0x383a344C32c0787BAfea507b1D19097Ad049D7eD", // Generic Moonwell Vault on Base
+    inputToken: {
+      symbol: "USDC",
+      decimals: 6,
+      address: BASE_USDC_ADDRESS,
+    },
+    receiptToken: {
+      symbol: "mUSDC",
+    },
+    protocol: {
+      name: "Moonwell",
+      network: "Base",
+    },
+    name: "Moonwell Flagship USDC",
+  },
 ];
+
+
+
 // Other constants can be added here

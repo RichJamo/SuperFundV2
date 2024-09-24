@@ -14,7 +14,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL_BASE);
 
-async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: Address) {
+export async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: Address) {
   const aaveLendingPool = new ethers.Contract(poolAddress, lendingPoolABI, provider);
 
   const averageBlockTimeInSeconds = 2;
@@ -37,7 +37,7 @@ async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: Address
   return Math.pow(1 + normalizedRateOfChange, 365 / 7) - 1;
 }
 
-async function calculateMoonwellAPY(receiptTokenAddress: Address, inputTokenAddress: Address) {
+export async function calculateMoonwellAPY(receiptTokenAddress: Address) {
   const moonwellVault = new ethers.Contract(receiptTokenAddress, moonwellVaultABI, provider);
 
   const averageBlockTimeInSeconds = 2;
@@ -137,139 +137,65 @@ export const fetchTotalAssets = async (vaultAddress: Address) => {
   return formattedBalance.toString();
 }
 
-export const fetchVaultDataRPC = async (vaultIds: string[]): Promise<VaultData[]> => {
-  const vaultData: VaultData[] = [];
-
-  for (const vaultId of vaultIds) {
-    try {
-      // Fetch the vault contract
-      const contract = getContract({
-        client,
-        chain: base,
-        address: vaultId,
-      });
-
-      // Fetch vault data
-      const name = await readContract({
-        contract,
-        method: "function name() view returns (string)",
-      });
-
-      const inputTokenAddress = await readContract({
-        contract,
-        method: "function asset() view returns (address)",
-      });
-
-      const strategyAddress = await readContract({
-        contract,
-        method: "function strategyAddress() view returns (address)",
-      });
-      const totalValueLockedUSD = await readContract({
-        contract,
-        method: "function totalAssets() view returns (uint256)",
-      });
-      // Fetch input token details
-      const inputTokenContract = getContract({
-        client,
-        chain: base,
-        address: inputTokenAddress,
-      });
-
-      const inputTokenSymbol = await readContract({
-        contract: inputTokenContract,
-        method: "function symbol() view returns (string)",
-      });
-
-      const inputTokenDecimals = await readContract({
-        contract: inputTokenContract,
-        method: "function decimals() view returns (uint8)",
-      });
-
-      // Fetch output token details (from strategy)
-      const strategyContract = getContract({
-        client,
-        chain: base,
-        address: strategyAddress,
-      });
-      let outputTokenSymbol = "";
-      let APY7d = 0;
-      let protocol = {
-        name: "Unknown",
-        network: "Unknown",
-      };
-      if (vaultId === "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d") {
-        const receiptTokenAddress = await readContract({
-          contract: strategyContract,
-          method: "function aaveReceiptToken() view returns (address)",
-        });
-
-        const receiptTokenContract = getContract({
+export const updateAPYs = async (vaultData: VaultData[]): Promise<VaultData[]> => {
+  const updatedVaults = await Promise.all(
+    vaultData.map(async (vault) => {
+      try {
+        const contract = getContract({
           client,
           chain: base,
-          address: receiptTokenAddress,
+          address: vault.id,
         });
-
-        outputTokenSymbol = await readContract({
-          contract: receiptTokenContract,
-          method: "function symbol() view returns (string)",
+        const strategyAddress = await readContract({
+          contract,
+          method: "function strategyAddress() view returns (address)",
         });
-
-        const poolAddress = await readContract({
-          contract: receiptTokenContract,
-          method: "function POOL() view returns (address)",
-        });
-
-        APY7d = await calculateAaveAPY(poolAddress as Address, inputTokenAddress as Address);
-
-        // Placeholder for protocol details and rates as these might need to be manually added
-        protocol = {
-          name: "Aave",
-          network: "Base",
-        };
-      } else {
-        const receiptTokenAddress = await readContract({
-          contract: strategyContract,
-          method: "function receiptToken() view returns (address)",
-        });
-
-        const receiptTokenContract = getContract({
+        const strategyContract = getContract({
           client,
           chain: base,
-          address: receiptTokenAddress,
+          address: strategyAddress,
         });
+        let APY7d = 0;
+        if (vault.protocol.name === "Aave") {
+          console.log("Calculating Aave 7d APY")
+          const receiptTokenAddress = await readContract({
+            contract: strategyContract,
+            method: "function aaveReceiptToken() view returns (address)",
+          });
 
-        outputTokenSymbol = await readContract({
-          contract: receiptTokenContract,
-          method: "function symbol() view returns (string)",
-        });
+          const receiptTokenContract = getContract({
+            client,
+            chain: base,
+            address: receiptTokenAddress,
+          });
 
+          const poolAddress = await readContract({
+            contract: receiptTokenContract,
+            method: "function POOL() view returns (address)",
+          });
 
-        APY7d = await calculateMoonwellAPY(receiptTokenAddress as Address, inputTokenAddress as Address);
+          APY7d = await calculateAaveAPY(poolAddress as Address, vault.inputToken.address as Address);
+          console.log("APY7d", APY7d);
+        } else {
+          // Generic logic for other vaults (e.g., Moonwell)
+          const receiptTokenAddress = await readContract({
+            contract: strategyContract,
+            method: "function receiptToken() view returns (address)",
+          });
+          APY7d = await calculateMoonwellAPY(receiptTokenAddress as Address);
+        }
 
-        // Placeholder for protocol details and rates as these might need to be manually added
-        protocol = {
-          name: "Moonwell",
-          network: "Base",
+        return {
+          ...vault,
+          APY7d,
         };
+      } catch (error) {
+        console.error(`Error fetching data for vault ${vault.id}:`, error);
+        return { ...vault, totalAssets: "Error", APY7d: 0 };
       }
-      vaultData.push({
-        id: vaultId,
-        name,
-        inputToken: {
-          symbol: inputTokenSymbol,
-          decimals: Number(inputTokenDecimals),
-        },
-        outputToken: {
-          symbol: outputTokenSymbol,
-        },
-        protocol,
-        totalValueLockedUSD: totalValueLockedUSD.toString(),
-        APY7d
-      });
-    } catch (error) {
-      console.error(`Error fetching data for vault ${vaultId}:`, error);
-    }
-  }
+    })
+  );
 
-  return vaultData;
+  return updatedVaults;
 };
+

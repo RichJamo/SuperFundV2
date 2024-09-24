@@ -1,17 +1,6 @@
 import { ThirdwebClient } from "thirdweb";
 import { ChainOptions } from "thirdweb/chains";
 
-export interface Vault {
-  id: string;
-  chain: string;
-  protocol: string;
-  name: string;
-  symbol: string;
-  totalAssets: string;
-  apy7d: string;
-  userBalance?: string;
-}
-
 export interface NewUserModalProps {
   isOpen: boolean;
   onRequestClose: () => void;
@@ -39,31 +28,34 @@ export interface VaultData {
   inputToken: {
     symbol: string;
     decimals: number;
+    address: string;
   };
-  outputToken: {
+  receiptToken: {
     symbol: string;
+    address: string;
   };
   protocol: {
     name: string;
     network: string;
   }
   name: string;
-  totalValueLockedUSD: string;
-  APY7d: number;
 }
 
-export interface FormattedVault {
-  id: string;
-  name: string;
-  symbol: string;
-  chain: string;
-  protocol: string;
-  totalAssets: string;
-  previewPPS: string;
-  pricePerVaultShare: string;
-  apy7d: string;
-  userBalance: string;
+export interface UserVaultBalance {
+  vaultId: string;
+  balance: string | number | "Error"; // Adjust the type as needed
 }
+
+export interface VaultTotalAssets {
+  vaultId: string;
+  totalAssets: string | number | "Error"; // Adjust the type as needed
+}
+
+export interface VaultAPY {
+  vaultId: string;
+  APY7d: string | number | "Error"; // Adjust the type as needed
+}
+
 export interface User {
   walletAddress: string;
   managerAddress: string;

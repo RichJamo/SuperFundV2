@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Vault } from "../types/types";
+import { VaultData, VaultAPY, VaultTotalAssets, UserVaultBalance } from "../types/types";
 import { Address } from "thirdweb";
 import DepositModal from "./DepositModal";
 import WithdrawModal from "./WithdrawModal";
@@ -7,7 +7,10 @@ import mixpanel from "mixpanel-browser";
 
 interface VaultsViewProps {
   loading: boolean;
-  vaults: Vault[];
+  vaults: VaultData[];
+  vaultAPYs: VaultAPY[];
+  userVaultBalances: UserVaultBalance[];
+  vaultTotalAssets: VaultTotalAssets[];
   transactionAmount: string;
   setTransactionAmount: (value: string) => void;
   depositTransaction: (value: Address) => Promise<any>;
@@ -18,6 +21,9 @@ interface VaultsViewProps {
 const VaultsView: React.FC<VaultsViewProps> = ({
   loading,
   vaults,
+  vaultAPYs,
+  userVaultBalances,
+  vaultTotalAssets,
   transactionAmount,
   setTransactionAmount,
   depositTransaction,
@@ -26,10 +32,10 @@ const VaultsView: React.FC<VaultsViewProps> = ({
 }) => {
   const [isDepositModalOpen, setDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setWithdrawModalOpen] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<Vault | null>(null);
+  const [selectedVault, setSelectedVault] = useState<VaultData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleDepositClick = (vault: Vault) => {
+  const handleDepositClick = (vault: VaultData) => {
     setSelectedVault(vault);
     mixpanel.track("Deposit Button Clicked", {
       vault: vault.name,
@@ -38,7 +44,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
     setDepositModalOpen(true);
   };
 
-  const handleWithdrawClick = (vault: Vault) => {
+  const handleWithdrawClick = (vault: VaultData) => {
     setSelectedVault(vault);
     mixpanel.track("Withdraw Button Clicked", {
       vault: vault.name,
@@ -92,7 +98,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                   Protocol
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 tracking-wider">
-                  Vault
+                  VaultData
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-zinc-300 tracking-wider">
                   Total Assets
@@ -111,18 +117,24 @@ const VaultsView: React.FC<VaultsViewProps> = ({
             <tbody className="bg-gray-900">
               {vaults.map((vault) => (
                 <tr key={vault.id}>
-                  <td className="px-4 py-4 whitespace-nowrap">{vault.chain}</td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {vault.protocol}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">{vault.name}</td>
+                    {vault.protocol.network}
+                    </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {`$ ${Number(vault.totalAssets).toFixed(2)}`}
+                    {vault.protocol.name}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">{(Number(vault.apy7d) * 100).toFixed(2)}%</td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                  {`$ ${Number(vault.userBalance).toFixed(2)}`}
+                    {vault.name}
+                    </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {vaultTotalAssets.find((asset) => asset.vaultId === vault.id)?.totalAssets}
                   </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {vaultAPYs.find((APY7d) => APY7d.vaultId === vault.id)?.APY7d}%
+                    </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    {userVaultBalances.find((balance) => balance.vaultId === vault.id)?.balance}
+                    </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
                       <button
@@ -163,7 +175,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         setTransactionAmount={setTransactionAmount}
         handleWithdraw={handleWithdraw}
         vaultBalance={selectedVault ? selectedVault.userBalance : "0"}
-        vaultTokenSymbol={selectedVault ? selectedVault.symbol : ""}
+        vaultTokenSymbol={selectedVault ? selectedVault.receiptToken.symbol : ""}
         isProcessing={isProcessing}  // Pass processing state to modal
       />
     </div>

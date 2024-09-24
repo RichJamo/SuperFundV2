@@ -23,11 +23,11 @@ export const fetchVaultData = async (vaultIds: string[]): Promise<any> => {
                   symbol
                   decimals
                 }
-                outputToken {
+                receiptToken {
                   symbol
                   decimals
                 }
-                totalValueLockedUSD
+                totalAssets
                 rates {
                   id
                   rate
