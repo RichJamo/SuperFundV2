@@ -22,26 +22,29 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   }
 
   // Fetch the vault address argument required for the BaseAaveStrategy constructor
+  const name = args.name;
   const vault = args.vault; // This should be passed as an argument
   const inputToken = args.inputToken;
-  const poolAddress = args.poolAddress;
   const receiptToken = args.receiptToken;
+  if (!name) {
+    throw new Error("🚨 Strategy name is required");
+  }
   if (!vault) {
     throw new Error("🚨 Vault address is required");
   }
   if (!inputToken) {
     throw new Error("🚨 Input token address is required");
   }
-  if (!poolAddress) {
-    throw new Error("🚨 Aave pool address is required");
-  }
   if (!receiptToken) {
     throw new Error("🚨 Receipt token address is required");
   }
-
+  const contractName = args.contract
+  if (!contractName) {
+    throw new Error("🚨 Strategy contract name is required");
+  }
   // Deploy the BaseAaveStrategy contract
-  const factory = await hre.ethers.getContractFactory("BaseAaveStrategy");
-  const contract = await factory.deploy(vault, inputToken, poolAddress, receiptToken);
+  const factory = await hre.ethers.getContractFactory(contractName);
+  const contract = await factory.deploy(name, vault, inputToken, receiptToken);
   await contract.deployed();
 
   console.log(`🔑 Using account: ${signer.address}`);
@@ -54,7 +57,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     try {
       await hre.run("verify:verify", {
         address: contract.address,
-        constructorArguments: [vault, inputToken, poolAddress, receiptToken],
+        constructorArguments: [name, vault, inputToken, receiptToken],
       });
       console.log(`✅ Contract verified: https://basescan.io/address/${contract.address}`);
     } catch (err) {
@@ -70,11 +73,12 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 };
 
 // Define the Hardhat task for deployment
-task("deploy-strategy", "Deploy the BaseAaveStrategy contract", main)
+task("deploy-strategy", "Deploy a Strategy contract", main)
   .addFlag("json", "Output in JSON")
+  .addParam("contract", "The name of the strategy contract to deploy")
+  .addParam("name", "The name of the strategy")
   .addParam("vault", "The address of the vault")
   .addParam("inputToken", "The address of the input token")
-  .addParam("poolAddress", "The address of the Aave pool")
   .addParam("receiptToken", "The address of the receipt token")
 
 export default {};
