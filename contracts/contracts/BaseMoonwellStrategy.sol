@@ -9,23 +9,25 @@ import "./interfaces/IMoonwellVault.sol";
 // MOONWELL_BASE_USDC_VAULT_ADDRESS = 0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca;
 
 contract BaseMoonwellStrategy is Ownable {
-    address public vault;
-
+    string public name;
+    address public amanaVault;
     IERC20 public inputToken;
-    IMoonwellVault public moonwellVault;
+    IMoonwellVault public receiptToken;
 
     constructor(
-        address _vault,
+        string memory _name,
+        address _amanaVault,
         address _inputTokenAddress,
-        address _moonwellVaultAddress
+        address _receiptTokenAddress
     ) {
-        vault = _vault;
-        inputToken = IERC20(_inputTokenAddress); // could get this from vault
-        moonwellVault = IMoonwellVault(_moonwellVaultAddress);
+        name = _name;
+        amanaVault = _amanaVault;
+        inputToken = IERC20(_inputTokenAddress); // could get this from amanaVault
+        receiptToken = IMoonwellVault(_receiptTokenAddress);
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, "Only vault can call");
+        require(msg.sender == amanaVault, "Only amanaVault can call");
         _;
     }
 
@@ -36,17 +38,17 @@ contract BaseMoonwellStrategy is Ownable {
             address(this),
             amount
         );
-        inputToken.approve(address(moonwellVault), amount);
-        moonwellVault.deposit(amount, address(this));
+        inputToken.approve(address(receiptToken), amount);
+        receiptToken.deposit(amount, address(this));
     }
 
     function withdraw(uint256 _amount) external onlyVault {
-        moonwellVault.withdraw(_amount, msg.sender, address(this));
+        receiptToken.withdraw(_amount, msg.sender, address(this));
     }
 
     function totalUnderlyingAssets() external view returns (uint256) {
-        uint256 shares = moonwellVault.balanceOf(address(this));
-        return moonwellVault.convertToAssets(shares);
+        uint256 shares = receiptToken.balanceOf(address(this));
+        return receiptToken.convertToAssets(shares);
     }
 
     function emergencyWithdraw(address _token) external onlyOwner {
