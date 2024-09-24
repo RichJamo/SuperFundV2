@@ -18,7 +18,7 @@ export const VAULT_IDS = [
   // "0x724dc807b04555b71ed48a6896b6F41593b8C637", // what I got from the subgraph (this is the AToken)
   // "0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5"
   // "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486" //USDC vault on Arbitrum
-  "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Vault deployed on Base
-  "0x383a344C32c0787BAfea507b1D19097Ad049D7eD"
+  "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Aave Vault deployed on Base
+  "0x383a344C32c0787BAfea507b1D19097Ad049D7eD" // Generic Moonwell Vault deployed on Base
 ];
 // Other constants can be added here
