@@ -16,7 +16,7 @@ import { base } from "thirdweb/chains";
 import { toast } from "react-toastify";
 import mixpanel from "mixpanel-browser";
 import { useQueryClient } from "@tanstack/react-query";
-import { useUpdateUserVaultBalances, useUpdateVaultTotalAssets, useUpdateAPYs } from "@/hooks/hooks";
+import { useUpdateVaultBalanceAndTotal, useUpdateAPYs } from "@/hooks/hooks";
 
 const VaultsContainer = () => {
   const [transactionAmount, setTransactionAmount] = useState("1");
@@ -49,8 +49,7 @@ const VaultsContainer = () => {
     address: BASE_USDC_ADDRESS,
   });
 
-  useUpdateUserVaultBalances(vaults, EOAaccount, setUserVaultBalances, transactionCompleted);
-  useUpdateVaultTotalAssets(vaults, EOAaccount, setVaultTotalAssets, userVaultBalances);
+  useUpdateVaultBalanceAndTotal(vaults, EOAaccount, setUserVaultBalances, transactionCompleted);
   useUpdateAPYs(vaults, setVaultAPYs, setLoading);
 
   const handleDepositTransaction = async (vaultId: Address) => {
@@ -67,29 +66,24 @@ const VaultsContainer = () => {
         EOAaccount,
         scaledAmount, //TODO make this general for all tokens?
       );
-      console.log("1")
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
         amount: scaledAmount.toString(),
       });
-      console.log("2")
       toast.success("Transaction confirmed");
-      console.log("3")
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
-      console.log("4")
       refetch(); //refetches usdc balance of user
       setTimeout(() => {
         // Trigger the custom hooks after a short delay
         setTransactionCompleted(!transactionCompleted);
-      }, 2000);  // 3 second delay
-      console.log("6")
+      }, 1000);  // 1 second delay
     } catch (error) {
       mixpanel.track("Deposit Submitted", {
         vault: vaultId.toString(),
       });
       toast.error("Transaction failed", {
         position: "top-right",
-        autoClose: 3000,  // Close automatically after 3 seconds
+        autoClose: 2000,  // Close automatically after 2 seconds
       });
       throw new Error("Transaction failed");
     }
@@ -113,23 +107,20 @@ const VaultsContainer = () => {
         vault: vaultId.toString(),
         amount: scaledAmount.toString(),
       });
-      console.log("1")
       toast.success("Transaction confirmed");
-      console.log("2")
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
       setTimeout(() => {
         // Trigger the custom hooks after a short delay
         setTransactionCompleted(!transactionCompleted);
-      }, 2000);  // 3 second delay
-      console.log("3")
+      }, 1000);  // 1 second delay
     } catch (error) {
       mixpanel.track("Withdraw Failed", {
         vault: vaultId.toString(),
       });
       toast.error("Transaction failed", {
         position: "top-right",
-        autoClose: 3000,  // Close automatically after 3 seconds
+        autoClose: 2000,  // Close automatically after 2 seconds
       });
       throw new Error("Transaction failed");
     }

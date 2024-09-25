@@ -7,14 +7,14 @@ import { getContract, readContract } from "thirdweb";
 import { client } from "../utils/client";
 import { base } from "thirdweb/chains";
 
-export const useUpdateUserVaultBalances = (
+export const useUpdateVaultBalanceAndTotal = (
   vaults: VaultData[],
   activeAccount: Account,
   setUserVaultBalances: React.Dispatch<React.SetStateAction<any[]>>, // Accepts state setter
   transactionCompleted: boolean,
 ) => {
   useEffect(() => {
-    const updateUserVaultBalance = async () => {
+    const updateVaultBalanceAndTotal = async () => {
       try {
         const balances = await Promise.all(
           vaults.map(async (vault) => {
@@ -24,7 +24,9 @@ export const useUpdateUserVaultBalances = (
                 vault.id as Address
               );
               console.log(`Fetched balance for vault ${vault.id}:`, balance);
-              return { vaultId: vault.id, balance };  // Return the balance associated with the vault ID
+              const newTotalAssets = await fetchTotalAssets(vault.id as Address);
+              console.log(`Vault ${vault.id} - New total assets:`, newTotalAssets);
+              return { vaultId: vault.id, balance, totalAssets: newTotalAssets.toString() };
             } catch (error) {
               console.error(`Error fetching user balance for vault ${vault.id}:`, error);
               return { vaultId: vault.id, balance: "Error" };
@@ -40,49 +42,11 @@ export const useUpdateUserVaultBalances = (
     };
 
     if (activeAccount && vaults.length > 0) {
-      updateUserVaultBalance();
+      updateVaultBalanceAndTotal();
     }
 
-  }, [vaults, activeAccount, setUserVaultBalances, transactionCompleted]);  // Dependencies: trigger on vaults, activeAccount, setUserVaultBalances, and setLoading changes
+  }, [vaults, activeAccount, setUserVaultBalances, transactionCompleted]);
 };
-
-export const useUpdateVaultTotalAssets = (
-  vaults: VaultData[],
-  activeAccount: Account | null,
-  setVaultTotalAssets: (vaultTotalAssets: { vaultId: string, totalAssets: string }[]) => void,
-  userVaultBalances: { vaultId: string, balance: string | number | "Error" }[]
-) => {
-  useEffect(() => {
-    const updateVaultTotalAssets = async () => {
-      try {
-        const updatedVaultTotalAssets = await Promise.all(
-          vaults.map(async (vault) => {
-            try {
-              const newTotalAssets = await fetchTotalAssets(vault.id as Address);
-              console.log(`Vault ${vault.id} - New total assets:`, newTotalAssets);
-              return { vaultId: vault.id, totalAssets: newTotalAssets.toString() };
-            } catch (error) {
-              console.error(`Error fetching total assets for vault ${vault.id}:`, error);
-              return { vaultId: vault.id, totalAssets: "Error" };
-            }
-          })
-        );
-        setVaultTotalAssets(updatedVaultTotalAssets);
-      }
-      catch (error) {
-        console.error("Error updating vault total assets:", error);
-      }
-    };
-
-    // Trigger the function if there is an active account
-    if (activeAccount) {
-      updateVaultTotalAssets();
-    }
-
-  }, [vaults, activeAccount, setVaultTotalAssets, userVaultBalances]);  // Dependencies: triggers when vaults or activeAccount change
-};
-
-
 
 export const useUpdateAPYs = (
   vaults: VaultData[],
