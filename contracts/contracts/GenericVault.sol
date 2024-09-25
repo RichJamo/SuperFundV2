@@ -35,7 +35,6 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     uint8 private immutable _decimals;
     address public strategyAddress;
 
-    // Event to notify when strategyAddress is changed
     event StrategyUpdated(address indexed newStrategy);
 
     /**
