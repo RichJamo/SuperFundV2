@@ -57,6 +57,32 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         emit StrategyUpdated(_strategyAddress);
     }
 
+    function switchStrategy(address newStrategy) external onlyOwner {
+        require(
+            newStrategy != address(0),
+            "New strategy is not a valid address"
+        );
+        require(
+            newStrategy != strategyAddress,
+            "New strategy must be different"
+        );
+
+        uint256 strategyBalance = IStrategy(strategyAddress)
+            .totalUnderlyingAssets();
+        if (strategyBalance > 0) {
+            IStrategy(strategyAddress).withdraw(strategyBalance);
+        }
+
+        strategyAddress = newStrategy;
+        emit StrategyUpdated(newStrategy);
+
+        uint256 vaultBalance = _asset.balanceOf(address(this));
+        if (vaultBalance > 0) {
+            _asset.approve(strategyAddress, vaultBalance);
+            IStrategy(strategyAddress).invest(vaultBalance);
+        }
+    }
+
     function emergencyWithdraw(address _token) external onlyOwner {
         uint256 balance = IERC20(_token).balanceOf(address(this));
         require(balance > 0, "No tokens to withdraw");
