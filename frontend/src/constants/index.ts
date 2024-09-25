@@ -15,14 +15,11 @@ export const MOONWELL_BASE_USDC_VAULT_ADDRESS = "0xc1256Ae5FF1cf2719D4937adb3bbC
 
 export const VAULT_DATA: VaultData[] = [
   {
-    id: "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Aave Vault on Base
+    id: "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Amana Aave Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,
       address: BASE_USDC_ADDRESS,
-    },
-    receiptToken: { //maybe shouldn't even have this here - it's confusing - this is set on strategy!
-      symbol: "aUSDC",
     },
     protocol: {
       name: "Aave",
@@ -31,20 +28,30 @@ export const VAULT_DATA: VaultData[] = [
     name: "AaveV3 USDC",
   },
   {
-    id: "0x383a344C32c0787BAfea507b1D19097Ad049D7eD", // Generic Moonwell Vault on Base
+    id: "0x383a344C32c0787BAfea507b1D19097Ad049D7eD", // Generic Amana Moonwell Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,
       address: BASE_USDC_ADDRESS,
-    },
-    receiptToken: {
-      symbol: "mUSDC",
     },
     protocol: {
       name: "Moonwell",
       network: "Base",
     },
     name: "Moonwell Flagship USDC",
+  },
+  {
+    id: "TBC", // Generic Amana Compound Vault on Base
+    inputToken: {
+      symbol: "USDC",
+      decimals: 6,
+      address: BASE_USDC_ADDRESS,
+    },
+    protocol: {
+      name: "Compound",
+      network: "Base",
+    },
+    name: "Compound USDC",
   },
 ];
 

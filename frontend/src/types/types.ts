@@ -30,10 +30,6 @@ export interface VaultData {
     decimals: number;
     address: string;
   };
-  receiptToken: {
-    symbol: string;
-    address: string;
-  };
   protocol: {
     name: string;
     network: string;

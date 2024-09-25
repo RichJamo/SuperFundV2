@@ -55,30 +55,30 @@ const VaultsView: React.FC<VaultsViewProps> = ({
   const handleDeposit = async () => {
     if (!selectedVault) return;
 
-    setIsProcessing(true);  // Start processing state
+    setIsProcessing(true);
 
     try {
       await depositTransaction(selectedVault.id as Address);
     } catch (error) {
       console.error("Transaction failed:", error);
     } finally {
-      setIsProcessing(false);  // Stop processing state
-      setDepositModalOpen(false);  // Close the modal after transaction
+      setIsProcessing(false);
+      setDepositModalOpen(false);
     }
   };
 
   const handleWithdraw = async () => {
     if (!selectedVault) return;
 
-    setIsProcessing(true);  // Start processing state
+    setIsProcessing(true);
 
     try {
       await withdrawTransaction(selectedVault.id as Address);
     } catch (error) {
       console.error("Transaction failed:", error);
     } finally {
-      setIsProcessing(false);  // Stop processing state
-      setWithdrawModalOpen(false);  // Close the modal after transaction
+      setIsProcessing(false);
+      setWithdrawModalOpen(false);
     }
   };
 
@@ -158,7 +158,6 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         </div>
       )}
 
-      {/* Modal Component */}
       <DepositModal
         isOpen={isDepositModalOpen}
         closeModal={() => setDepositModalOpen(false)}
@@ -166,7 +165,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         setTransactionAmount={setTransactionAmount}
         handleDeposit={handleDeposit}
         usdcBalance={usdcBalance}
-        isProcessing={isProcessing}  // Pass processing state to modal
+        isProcessing={isProcessing}
       />
       <WithdrawModal
         isOpen={isWithdrawModalOpen}
@@ -175,8 +174,8 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         setTransactionAmount={setTransactionAmount}
         handleWithdraw={handleWithdraw}
         vaultBalance={selectedVault ? userVaultBalances.find((balance) => balance.vaultId === selectedVault.id)?.balance : "0"}
-        vaultTokenSymbol={selectedVault ? selectedVault.receiptToken.symbol : ""}
-        isProcessing={isProcessing}  // Pass processing state to modal
+        vaultTokenSymbol={selectedVault ? selectedVault.inputToken.symbol : ""} //ToDo - get from strategy contract
+        isProcessing={isProcessing}
       />
     </div>
   );
