@@ -127,13 +127,13 @@ const VaultsView: React.FC<VaultsViewProps> = ({
                     {vault.name}
                     </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {vaultTotalAssets.find((asset) => asset.vaultId === vault.id)?.totalAssets}
+                    $ {Number(vaultTotalAssets.find((asset) => asset.vaultId === vault.id)?.totalAssets).toFixed(2)}
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {vaultAPYs.find((APY7d) => APY7d.vaultId === vault.id)?.APY7d}%
+                    {(Number(vaultAPYs.find((APY7d) => APY7d.vaultId === vault.id)?.APY7d)*100).toFixed(2)}%
                     </td>
                   <td className="px-4 py-4 whitespace-nowrap">
-                    {userVaultBalances.find((balance) => balance.vaultId === vault.id)?.balance}
+                    $ {Number(userVaultBalances.find((balance) => balance.vaultId === vault.id)?.balance).toFixed(2)}
                     </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
@@ -174,7 +174,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         transactionAmount={transactionAmount}
         setTransactionAmount={setTransactionAmount}
         handleWithdraw={handleWithdraw}
-        vaultBalance={selectedVault ? selectedVault.userBalance : "0"}
+        vaultBalance={selectedVault ? userVaultBalances.find((balance) => balance.vaultId === selectedVault.id)?.balance : "0"}
         vaultTokenSymbol={selectedVault ? selectedVault.receiptToken.symbol : ""}
         isProcessing={isProcessing}  // Pass processing state to modal
       />

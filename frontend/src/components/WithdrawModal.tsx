@@ -6,7 +6,7 @@ const WithdrawModal: React.FC<{
   transactionAmount: string;
   setTransactionAmount: (value: string) => void;
   handleWithdraw: () => void;
-  vaultBalance: string | undefined;
+  vaultBalance: string | number | undefined;
   vaultTokenSymbol: string | undefined;
   isProcessing: boolean;
 }> = ({
@@ -52,7 +52,7 @@ const WithdrawModal: React.FC<{
               />
               <button
                 className="bg-gray-400 h-fit p-1 rounded-md text-black"
-                onClick={() => setTransactionAmount(vaultBalance || "0")}
+                onClick={() => setTransactionAmount(vaultBalance?.toString() || "0")}
               >
                 Max
               </button>

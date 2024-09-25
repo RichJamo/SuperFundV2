@@ -11,11 +11,10 @@ export const useUpdateUserVaultBalances = (
   vaults: VaultData[],
   activeAccount: Account,
   setUserVaultBalances: React.Dispatch<React.SetStateAction<any[]>>, // Accepts state setter
-  setLoading: (loading: boolean) => void
+  transactionCompleted: boolean,
 ) => {
   useEffect(() => {
     const updateUserVaultBalance = async () => {
-      setLoading(true); // Set loading to true before the update begins
       try {
         const balances = await Promise.all(
           vaults.map(async (vault) => {
@@ -33,28 +32,25 @@ export const useUpdateUserVaultBalances = (
           })
         );
 
-        // Update the state with the new balances array
         setUserVaultBalances(balances);
         console.log("Updated userVaultBalances", balances);
       } catch (error) {
         console.error("Error updating user vault balances:", error);
-      } finally {
-        setLoading(false); // Set loading to false once all updates are complete
       }
     };
 
-    // Trigger the balance update when vaults or activeAccount change
     if (activeAccount && vaults.length > 0) {
       updateUserVaultBalance();
     }
-  }, [vaults, activeAccount, setUserVaultBalances, setLoading]);  // Dependencies: trigger on vaults, activeAccount, setUserVaultBalances, and setLoading changes
+
+  }, [vaults, activeAccount, setUserVaultBalances, transactionCompleted]);  // Dependencies: trigger on vaults, activeAccount, setUserVaultBalances, and setLoading changes
 };
 
 export const useUpdateVaultTotalAssets = (
   vaults: VaultData[],
-  setVaultTotalAssets: (vaultTotalAssets: { vaultId: string, totalAssets: string }[]) => void,
   activeAccount: Account | null,
-  setLoading: (loading: boolean) => void
+  setVaultTotalAssets: (vaultTotalAssets: { vaultId: string, totalAssets: string }[]) => void,
+  userVaultBalances: { vaultId: string, balance: string | number | "Error" }[]
 ) => {
   useEffect(() => {
     const updateVaultTotalAssets = async () => {
@@ -72,17 +68,18 @@ export const useUpdateVaultTotalAssets = (
           })
         );
         setVaultTotalAssets(updatedVaultTotalAssets);
-      } finally {
-        setLoading(false);  // Stop loading state after updating total assets
+      }
+      catch (error) {
+        console.error("Error updating vault total assets:", error);
       }
     };
 
     // Trigger the function if there is an active account
     if (activeAccount) {
-      setLoading(true);  // Set loading state before fetching
       updateVaultTotalAssets();
     }
-  }, [vaults, activeAccount, setVaultTotalAssets, setLoading]);  // Dependencies: triggers when vaults or activeAccount change
+
+  }, [vaults, activeAccount, setVaultTotalAssets, userVaultBalances]);  // Dependencies: triggers when vaults or activeAccount change
 };
 
 
@@ -95,6 +92,7 @@ export const useUpdateAPYs = (
   useEffect(() => {
     const updateAPYs = async () => {
       try {
+        console.log("Updating APYs");
         const updatedVaultAPYs = await Promise.all(
           vaults.map(async (vault) => {
             try {
@@ -163,5 +161,5 @@ export const useUpdateAPYs = (
       setLoading(true);  // Set loading state before fetching APYs
       updateAPYs();
     }
-  }, [vaults, setVaultAPYs, setLoading]);  // Dependencies: will re-run when vaults, setVaultAPYs, or setLoading change
+  }, []);
 };

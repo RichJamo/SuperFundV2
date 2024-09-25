@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import {
   executeDeposit,
   executeWithdrawal,
-  fetchUserVaultBalance,
-  fetchTotalAssets
   } from "../actions/actions";
 import VaultsView from "../components/VaultsView";
 import { VaultData, VaultAPY, UserVaultBalance, VaultTotalAssets } from "../types/types";
@@ -27,6 +25,7 @@ const VaultsContainer = () => {
   const [vaultAPYs, setVaultAPYs] = useState<VaultAPY[]>([]);
   const [userVaultBalances, setUserVaultBalances] = useState<UserVaultBalance[]>([]);
   const [vaultTotalAssets, setVaultTotalAssets] = useState<VaultTotalAssets[]>([]);
+  const [transactionCompleted, setTransactionCompleted] = useState(false);
 
   const vaults: VaultData[] = VAULT_DATA;
   const EOAaccount = useActiveAccount();
@@ -50,8 +49,8 @@ const VaultsContainer = () => {
     address: BASE_USDC_ADDRESS,
   });
 
-  useUpdateUserVaultBalances(vaults, EOAaccount, setUserVaultBalances, setLoading);
-  useUpdateVaultTotalAssets(vaults, setVaultTotalAssets, EOAaccount, setLoading);
+  useUpdateUserVaultBalances(vaults, EOAaccount, setUserVaultBalances, transactionCompleted);
+  useUpdateVaultTotalAssets(vaults, EOAaccount, setVaultTotalAssets, userVaultBalances);
   useUpdateAPYs(vaults, setVaultAPYs, setLoading);
 
   const handleDepositTransaction = async (vaultId: Address) => {
@@ -76,9 +75,13 @@ const VaultsContainer = () => {
       console.log("2")
       toast.success("Transaction confirmed");
       console.log("3")
-      queryClient.invalidateQueries({ queryKey: ["walletBalance"] }); //makes sure the wallet updates
+      queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       console.log("4")
       refetch(); //refetches usdc balance of user
+      setTimeout(() => {
+        // Trigger the custom hooks after a short delay
+        setTransactionCompleted(!transactionCompleted);
+      }, 2000);  // 3 second delay
       console.log("6")
     } catch (error) {
       mixpanel.track("Deposit Submitted", {
@@ -114,10 +117,12 @@ const VaultsContainer = () => {
       toast.success("Transaction confirmed");
       console.log("2")
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
-      console.log("3")
       refetch();
-      console.log("4")
-      console.log("5")
+      setTimeout(() => {
+        // Trigger the custom hooks after a short delay
+        setTransactionCompleted(!transactionCompleted);
+      }, 2000);  // 3 second delay
+      console.log("3")
     } catch (error) {
       mixpanel.track("Withdraw Failed", {
         vault: vaultId.toString(),
