@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { fetchUserVaultBalance, fetchTotalAssets, calculateAaveAPY, calculateMoonwellAPY } from "../actions/actions";
+import { fetchUserVaultBalance, fetchTotalAssets, calculateAaveAPY, calculateMoonwellAPY, calculateCompoundAPY } from "../actions/actions";
 import { Address } from "thirdweb";
 import { VaultData } from "../types/types";
 import { Account } from "thirdweb/wallets";
@@ -11,12 +11,13 @@ export const useUpdateVaultBalanceAndTotal = (
   vaults: VaultData[],
   activeAccount: Account,
   setUserVaultBalances: React.Dispatch<React.SetStateAction<any[]>>, // Accepts state setter
+  setVaultTotalAssets: React.Dispatch<React.SetStateAction<any[]>>, // Accepts state setter
   transactionCompleted: boolean,
 ) => {
   useEffect(() => {
     const updateVaultBalanceAndTotal = async () => {
       try {
-        const balances = await Promise.all(
+        const balancesAndAssets = await Promise.all(
           vaults.map(async (vault) => {
             try {
               const balance = await fetchUserVaultBalance(
@@ -26,27 +27,46 @@ export const useUpdateVaultBalanceAndTotal = (
               console.log(`Fetched balance for vault ${vault.id}:`, balance);
               const newTotalAssets = await fetchTotalAssets(vault.id as Address);
               console.log(`Vault ${vault.id} - New total assets:`, newTotalAssets);
-              return { vaultId: vault.id, balance, totalAssets: newTotalAssets.toString() };
+              return {
+                vaultId: vault.id,
+                balance,
+                totalAssets: newTotalAssets.toString(),
+              };
             } catch (error) {
-              console.error(`Error fetching user balance for vault ${vault.id}:`, error);
-              return { vaultId: vault.id, balance: "Error" };
+              console.error(`Error fetching user balance or total assets for vault ${vault.id}:`, error);
+              return {
+                vaultId: vault.id,
+                balance: "Error",
+                totalAssets: "Error",
+              };
             }
           })
         );
 
-        setUserVaultBalances(balances);
-        console.log("Updated userVaultBalances", balances);
+        const balances = balancesAndAssets.map(({ vaultId, balance }) => ({
+          vaultId,
+          balance,
+        }));
+
+        const totalAssets = balancesAndAssets.map(({ vaultId, totalAssets }) => ({
+          vaultId,
+          totalAssets,
+        }));
+
+        setUserVaultBalances(balances); // Update user balances
+        setVaultTotalAssets(totalAssets); // Update total assets
+        console.log("Updated userVaultBalances and vaultTotalAssets", balancesAndAssets);
       } catch (error) {
-        console.error("Error updating user vault balances:", error);
+        console.error("Error updating vault balances and total assets:", error);
       }
     };
 
     if (activeAccount && vaults.length > 0) {
       updateVaultBalanceAndTotal();
     }
-
-  }, [vaults, activeAccount, setUserVaultBalances, transactionCompleted]);
+  }, [vaults, activeAccount, setUserVaultBalances, setVaultTotalAssets, transactionCompleted]);
 };
+
 
 export const useUpdateAPYs = (
   vaults: VaultData[],
@@ -97,7 +117,15 @@ export const useUpdateAPYs = (
                 });
 
                 APY7d = await calculateAaveAPY(poolAddress as Address, vault.inputToken.address as Address);
-              } else {
+              } else if (vault.protocol.name === "Compound") {
+                const receiptTokenAddress = await readContract({
+                  contract: strategyContract,
+                  method: "function receiptToken() view returns (address)",
+                });
+
+                APY7d = await calculateCompoundAPY(receiptTokenAddress as Address);
+              }
+              else {
                 const receiptTokenAddress = await readContract({
                   contract: strategyContract,
                   method: "function receiptToken() view returns (address)",

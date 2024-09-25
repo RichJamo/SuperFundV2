@@ -41,7 +41,7 @@ export const VAULT_DATA: VaultData[] = [
     name: "Moonwell Flagship USDC",
   },
   {
-    id: "TBC", // Generic Amana Compound Vault on Base
+    id: "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486", // Generic Amana Compound Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,

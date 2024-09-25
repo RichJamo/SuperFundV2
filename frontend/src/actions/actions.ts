@@ -9,6 +9,7 @@ import { VaultData } from "../types/types";
 import { ethers, JsonRpcProvider } from "ethers";
 import lendingPoolABI from "../../abis/lendingPoolABI.json";
 import moonwellVaultABI from "../../abis/moonwellVaultABI.json";
+import compoundVaultABI from "../../abis/compoundVaultABI.json";
 
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -56,6 +57,22 @@ export async function calculateMoonwellAPY(receiptTokenAddress: Address) {
   const normalizedRateOfChange = Number(rateOfChange) / Number(10n ** 18n);
 
   return Math.pow(1 + normalizedRateOfChange, 365 / 7) - 1;
+}
+
+export async function calculateCompoundAPY(receiptTokenAddress: Address) {
+  const compoundVault = new ethers.Contract(receiptTokenAddress, compoundVaultABI, provider);
+
+  const secondsInAYear = 365 * 24 * 60 * 60;
+
+  const currentUtilization = ethers.toBigInt(await compoundVault.getUtilization());
+
+  const currentSupplyRate = ethers.toBigInt(await compoundVault.getSupplyRate(currentUtilization));
+
+  const currentSupplyRateScaled = Number(currentSupplyRate) / Number(1e18);
+
+  const currentAPY = Math.pow(1 + currentSupplyRateScaled, secondsInAYear) - 1;
+  console.log("currentAPY", currentAPY);
+  return currentAPY;
 }
 
 export const executeDeposit = async (vaultId: Address, activeAccount: Account, transactionAmount: bigint) => {

@@ -49,7 +49,7 @@ const VaultsContainer = () => {
     address: BASE_USDC_ADDRESS,
   });
 
-  useUpdateVaultBalanceAndTotal(vaults, EOAaccount, setUserVaultBalances, transactionCompleted);
+  useUpdateVaultBalanceAndTotal(vaults, EOAaccount, setUserVaultBalances, setVaultTotalAssets, transactionCompleted);
   useUpdateAPYs(vaults, setVaultAPYs, setLoading);
 
   const handleDepositTransaction = async (vaultId: Address) => {
