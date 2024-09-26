@@ -279,7 +279,10 @@ contract GenericVault is ERC20, IERC4626, Ownable {
 
         uint256 assets = previewMint(shares);
         _deposit(_msgSender(), receiver, assets, shares);
-        // to do - add this in? what will the first deposit to the vault do?
+
+        userAssetBreakdown[receiver].principal += assets;
+        totalPrincipal += assets;
+
         return assets;
     }
 
@@ -296,52 +299,18 @@ contract GenericVault is ERC20, IERC4626, Ownable {
             "ERC4626: withdraw more than max"
         );
 
-        uint256 shares = previewWithdraw(assets); // if totalAssets = 90, then we get back 45 shares
-        // we want 54.5 * 100 /109 = 50, or assets * userTotalShares / (userTotalAssets - fee, or breakdown.principal + breakdown.profit)
-        // previewWithdraw(assets) = _convertToShares(assets, Math.Rounding.Up); = assets.mulDiv(supply, totalAssets(), rounding) = 54.5 * 100 / 110 = 49.545454545454545454545454545455
+        uint256 shares = previewWithdraw(assets);
 
-        // Get the user’s current principal, profit, and fee
-        AssetBreakdown storage breakdown = userAssetBreakdown[owner];
-        uint256 totalUserAssets = convertToAssets(balanceOf(owner)); // this will give us 109 now
-        // if totalUserAssets = 90,
-        uint256 principalWithdrawn; // 0
-        uint256 feeWithdrawn; // 0
-        if (totalUserAssets > breakdown.principal) {
-            // 109 > 100
-            breakdown.profit = totalUserAssets - breakdown.principal; // 109 - 100 = 9
+        (
+            uint256 principalWithdrawn,
+            uint256 feeWithdrawn
+        ) = _calculateAndApplyFee(owner, assets);
 
-            // Calculate the fee as a percentage of the total profit
-            breakdown.fee =
-                (breakdown.profit * performanceFeeRate) /
-                (10000 - performanceFeeRate); // 9 * 1000 / 9000 = 1
-
-            // Ensure the user’s withdrawal is split correctly
-            principalWithdrawn =
-                (assets * breakdown.principal) /
-                totalUserAssets; // 54.5 * 100 / 109 = 50
-
-            uint256 profitWithdrawn = assets - principalWithdrawn; // 54.5 - 50 = 4.5
-            feeWithdrawn = (breakdown.fee * profitWithdrawn) / breakdown.profit; // 1 * 4.5 / 9 = 0.5
-
-            // Update user’s remaining balances
-            breakdown.principal -= principalWithdrawn; // 100 - 50 = 50
-            breakdown.profit -= profitWithdrawn; // 9 - 4.5 = 4.5
-            breakdown.fee -= feeWithdrawn; // 1 - 0.5 = 0.5
-        } else {
-            principalWithdrawn = assets;
-            feeWithdrawn = 0;
-            breakdown.principal -= principalWithdrawn;
-            breakdown.profit = 0;
-            breakdown.fee = 0;
+        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
+        if (feeWithdrawn > 0) {
+            SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
+            emit PerformanceFeePaid(owner, feeWithdrawn);
         }
-
-        totalPrincipal -= principalWithdrawn; // 100 - 50 = 50
-
-        // Execute the withdrawal from the strategy
-        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn); // 54.5 + 0.5 = 55 // TODO move this into _withdraw?
-
-        // Transfer the performance fee to the treasury
-        SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn); // 0.5
 
         _withdraw(_msgSender(), receiver, owner, assets, shares);
         return shares;
@@ -358,10 +327,60 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
-        IStrategy(strategyAddress).withdraw(assets);
+
+        (
+            uint256 principalWithdrawn,
+            uint256 feeWithdrawn
+        ) = _calculateAndApplyFee(owner, assets);
+
+        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
+
+        if (feeWithdrawn > 0) {
+            SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
+            emit PerformanceFeePaid(owner, feeWithdrawn);
+        }
+
         _withdraw(_msgSender(), receiver, owner, assets, shares);
 
         return assets;
+    }
+
+    function _calculateAndApplyFee(
+        address owner,
+        uint256 assets
+    ) internal returns (uint256 principalWithdrawn, uint256 feeWithdrawn) {
+        // Get the user’s current asset breakdown
+        AssetBreakdown storage breakdown = userAssetBreakdown[owner];
+        uint256 totalUserAssets = convertToAssets(balanceOf(owner)); // Convert user's shares to total assets
+
+        if (totalUserAssets > breakdown.principal) {
+            breakdown.profit = totalUserAssets - breakdown.principal;
+
+            // Calculate the fee as a percentage of the total profit
+            breakdown.fee =
+                (breakdown.profit * performanceFeeRate) /
+                (10000 - performanceFeeRate);
+
+            // Ensure the user’s withdrawal/redeem is split correctly
+            principalWithdrawn =
+                (assets * breakdown.principal) /
+                totalUserAssets;
+            uint256 profitWithdrawn = assets - principalWithdrawn;
+            feeWithdrawn = (breakdown.fee * profitWithdrawn) / breakdown.profit;
+
+            // Update user’s remaining balances
+            breakdown.principal -= principalWithdrawn;
+            breakdown.profit -= profitWithdrawn;
+            breakdown.fee -= feeWithdrawn;
+        } else {
+            principalWithdrawn = assets;
+            feeWithdrawn = 0;
+            breakdown.principal -= principalWithdrawn;
+            breakdown.profit = 0;
+            breakdown.fee = 0;
+        }
+
+        totalPrincipal -= principalWithdrawn;
     }
 
     /**
