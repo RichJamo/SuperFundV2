@@ -16,19 +16,19 @@ contract BaseAaveStrategy is Ownable {
     address public amanaVault;
     IERC20 public inputToken;
     IAavePool public aavePool;
-    IAaveReceiptToken public aaveReceiptToken;
+    IAaveReceiptToken public receiptToken;
 
     constructor(
         string memory _name,
         address _amanaVault,
         address _inputTokenAddress,
-        address _aaveReceiptTokenAddress
+        address _receiptTokenAddress
     ) {
         name = _name;
         amanaVault = _amanaVault;
         inputToken = IERC20(_inputTokenAddress);
-        aaveReceiptToken = IAaveReceiptToken(_aaveReceiptTokenAddress);
-        aavePool = IAavePool(aaveReceiptToken.POOL());
+        receiptToken = IAaveReceiptToken(_receiptTokenAddress);
+        aavePool = IAavePool(receiptToken.POOL());
     }
 
     modifier onlyVault() {
@@ -52,7 +52,7 @@ contract BaseAaveStrategy is Ownable {
     }
 
     function totalUnderlyingAssets() external view returns (uint256) {
-        return aaveReceiptToken.balanceOf(address(this));
+        return receiptToken.balanceOf(address(this));
     }
 
     function emergencyWithdraw(address _token) external onlyOwner {
