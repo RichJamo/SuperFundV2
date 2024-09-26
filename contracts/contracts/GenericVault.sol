@@ -345,6 +345,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     ) internal returns (uint256 feeWithdrawn) {
         AssetBreakdown storage breakdown = userAssetBreakdown[owner];
         uint256 totalUserAssets = convertToAssets(balanceOf(owner));
+        uint256 principalWithdrawn;
 
         if (totalUserAssets > breakdown.principal) {
             breakdown.profit = totalUserAssets - breakdown.principal;
