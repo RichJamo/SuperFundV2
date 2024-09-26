@@ -301,10 +301,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
 
         uint256 shares = previewWithdraw(assets);
 
-        (
-            uint256 principalWithdrawn,
-            uint256 feeWithdrawn
-        ) = _calculateAndApplyFee(owner, assets);
+        uint256 feeWithdrawn = _calculateAndApplyFee(owner, assets);
 
         IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
         if (feeWithdrawn > 0) {
@@ -328,10 +325,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
 
         uint256 assets = previewRedeem(shares);
 
-        (
-            uint256 principalWithdrawn,
-            uint256 feeWithdrawn
-        ) = _calculateAndApplyFee(owner, assets);
+        uint256 feeWithdrawn = _calculateAndApplyFee(owner, assets);
 
         IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
 
@@ -348,27 +342,23 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     function _calculateAndApplyFee(
         address owner,
         uint256 assets
-    ) internal returns (uint256 principalWithdrawn, uint256 feeWithdrawn) {
-        // Get the user’s current asset breakdown
+    ) internal returns (uint256 feeWithdrawn) {
         AssetBreakdown storage breakdown = userAssetBreakdown[owner];
-        uint256 totalUserAssets = convertToAssets(balanceOf(owner)); // Convert user's shares to total assets
+        uint256 totalUserAssets = convertToAssets(balanceOf(owner));
 
         if (totalUserAssets > breakdown.principal) {
             breakdown.profit = totalUserAssets - breakdown.principal;
 
-            // Calculate the fee as a percentage of the total profit
             breakdown.fee =
                 (breakdown.profit * performanceFeeRate) /
                 (10000 - performanceFeeRate);
 
-            // Ensure the user’s withdrawal/redeem is split correctly
             principalWithdrawn =
                 (assets * breakdown.principal) /
                 totalUserAssets;
             uint256 profitWithdrawn = assets - principalWithdrawn;
             feeWithdrawn = (breakdown.fee * profitWithdrawn) / breakdown.profit;
 
-            // Update user’s remaining balances
             breakdown.principal -= principalWithdrawn;
             breakdown.profit -= profitWithdrawn;
             breakdown.fee -= feeWithdrawn;
