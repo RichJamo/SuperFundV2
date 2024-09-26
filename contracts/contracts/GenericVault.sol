@@ -34,8 +34,22 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     IERC20 private immutable _asset;
     uint8 private immutable _decimals;
     address public strategyAddress;
+    address public treasuryAddress;
+    uint256 public performanceFeeRate = 1000; // 10%
+    uint256 private totalPrincipal;
+
+    struct AssetBreakdown {
+        uint256 principal; // Total user deposits
+        uint256 profit; // Profit above the principal
+        uint256 fee; // Performance fee on the profit
+    }
+
+    mapping(address => AssetBreakdown) private userAssetBreakdown;
+
+    mapping(address => uint256) private netDeposits;
 
     event StrategyUpdated(address indexed newStrategy);
+    event PerformanceFeePaid(address indexed user, uint256 amount);
 
     /**
      * @dev Set the underlying asset contract. This must be an ERC20-compatible contract (ERC20 or ERC777).
@@ -43,17 +57,26 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     constructor(
         string memory name_,
         string memory symbol_,
-        IERC20 asset_
+        IERC20 asset_,
+        address treasuryAddress_,
+        uint256 performanceFeeRate_ // 1000 = 10%
     ) ERC20(name_, symbol_) {
         (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(asset_);
         _decimals = success ? assetDecimals : super.decimals();
         _asset = asset_;
+        treasuryAddress = treasuryAddress_;
+        performanceFeeRate = performanceFeeRate_;
     }
 
     function setStrategy(address _strategyAddress) external onlyOwner {
         require(_strategyAddress != address(0), "Invalid strategy address");
         strategyAddress = _strategyAddress;
         emit StrategyUpdated(_strategyAddress);
+    }
+
+    function setPerformanceFee(uint256 newFeeRate) external onlyOwner {
+        require(newFeeRate <= 2000, "Fee must be less than or equal to 20%");
+        performanceFeeRate = newFeeRate;
     }
 
     function switchStrategy(address newStrategy) external onlyOwner {
@@ -158,7 +181,8 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     function convertToAssets(
         uint256 shares
     ) public view virtual override returns (uint256 assets) {
-        return _convertToAssets(shares, Math.Rounding.Down);
+        uint256 userAssets = _convertToAssets(shares, Math.Rounding.Down);
+        return userAssets;
     }
 
     /** @dev See {IERC4626-maxDeposit}. */
@@ -228,6 +252,9 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         uint256 shares = previewDeposit(assets);
         _deposit(_msgSender(), receiver, assets, shares);
 
+        // Update the user's principal
+        userAssetBreakdown[receiver].principal += assets; // TODO check for re-entrancy
+        totalPrincipal += assets;
         // Allocate the deposited assets to the strategy
         allocateToStrategy(assets);
 
@@ -269,10 +296,54 @@ contract GenericVault is ERC20, IERC4626, Ownable {
             "ERC4626: withdraw more than max"
         );
 
-        uint256 shares = previewWithdraw(assets);
-        IStrategy(strategyAddress).withdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        uint256 shares = previewWithdraw(assets); // if totalAssets = 90, then we get back 45 shares
+        // we want 54.5 * 100 /109 = 50, or assets * userTotalShares / (userTotalAssets - fee, or breakdown.principal + breakdown.profit)
+        // previewWithdraw(assets) = _convertToShares(assets, Math.Rounding.Up); = assets.mulDiv(supply, totalAssets(), rounding) = 54.5 * 100 / 110 = 49.545454545454545454545454545455
 
+        // Get the user’s current principal, profit, and fee
+        AssetBreakdown storage breakdown = userAssetBreakdown[owner];
+        uint256 totalUserAssets = convertToAssets(balanceOf(owner)); // this will give us 109 now
+        // if totalUserAssets = 90,
+        uint256 principalWithdrawn; // 0
+        uint256 feeWithdrawn; // 0
+        if (totalUserAssets > breakdown.principal) {
+            // 109 > 100
+            breakdown.profit = totalUserAssets - breakdown.principal; // 109 - 100 = 9
+
+            // Calculate the fee as a percentage of the total profit
+            breakdown.fee =
+                (breakdown.profit * performanceFeeRate) /
+                (10000 - performanceFeeRate); // 9 * 1000 / 9000 = 1
+
+            // Ensure the user’s withdrawal is split correctly
+            principalWithdrawn =
+                (assets * breakdown.principal) /
+                totalUserAssets; // 54.5 * 100 / 109 = 50
+
+            uint256 profitWithdrawn = assets - principalWithdrawn; // 54.5 - 50 = 4.5
+            feeWithdrawn = (breakdown.fee * profitWithdrawn) / breakdown.profit; // 1 * 4.5 / 9 = 0.5
+
+            // Update user’s remaining balances
+            breakdown.principal -= principalWithdrawn; // 100 - 50 = 50
+            breakdown.profit -= profitWithdrawn; // 9 - 4.5 = 4.5
+            breakdown.fee -= feeWithdrawn; // 1 - 0.5 = 0.5
+        } else {
+            principalWithdrawn = assets;
+            feeWithdrawn = 0;
+            breakdown.principal -= principalWithdrawn;
+            breakdown.profit = 0;
+            breakdown.fee = 0;
+        }
+
+        totalPrincipal -= principalWithdrawn; // 100 - 50 = 50
+
+        // Execute the withdrawal from the strategy
+        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn); // 54.5 + 0.5 = 55 // TODO move this into _withdraw?
+
+        // Transfer the performance fee to the treasury
+        SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn); // 0.5
+
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
         return shares;
     }
 
@@ -304,10 +375,17 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         Math.Rounding rounding
     ) internal view virtual returns (uint256 shares) {
         uint256 supply = totalSupply();
+        uint256 totalAssetsNetOfFee;
+        totalAssets() > totalPrincipal
+            ? totalAssetsNetOfFee =
+                totalAssets() -
+                ((totalAssets() - totalPrincipal) * performanceFeeRate) /
+                10000
+            : totalAssetsNetOfFee = totalAssets();
         return
             (assets == 0 || supply == 0)
                 ? _initialConvertToShares(assets, rounding)
-                : assets.mulDiv(supply, totalAssets(), rounding);
+                : assets.mulDiv(supply, totalAssetsNetOfFee, rounding);
     }
 
     /**
@@ -330,10 +408,17 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         Math.Rounding rounding
     ) internal view virtual returns (uint256 assets) {
         uint256 supply = totalSupply();
+        uint256 totalAssetsNetOfFee;
+        totalAssets() > totalPrincipal
+            ? totalAssetsNetOfFee =
+                totalAssets() -
+                ((totalAssets() - totalPrincipal) * performanceFeeRate) /
+                10000
+            : totalAssetsNetOfFee = totalAssets();
         return
             (supply == 0)
                 ? _initialConvertToAssets(shares, rounding)
-                : shares.mulDiv(totalAssets(), supply, rounding);
+                : shares.mulDiv(totalAssetsNetOfFee, supply, rounding);
     }
 
     /**
