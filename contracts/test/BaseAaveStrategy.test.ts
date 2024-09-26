@@ -56,11 +56,11 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Deploy Vault contract
       const Vault = await ethers.getContractFactory("GenericVault", owner);
-      amanaVault = await Vault.deploy("AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS);
+      amanaVault = await Vault.deploy("AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS, await owner.getAddress(), 1000);
 
       // Deploy BaseAaveStrategy contract and set the amanaVault address
       const BaseAaveStrategy = await ethers.getContractFactory("BaseAaveStrategy", owner);
-      strategy = await BaseAaveStrategy.deploy("AaveV3USDC", amanaVault.address, BASE_USDC_ADDRESS, BASE_AAVE_POOL_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
+      strategy = await BaseAaveStrategy.deploy("AaveV3USDC", amanaVault.address, BASE_USDC_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
 
       // Set the strategy address in the amanaVault
       await amanaVault.setStrategy(strategy.address);
@@ -98,13 +98,16 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Deposit USDC into the amanaVault
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
-
+      console.log("amanaVaultBalance after deposit: ", await amanaVault.balanceOf(await user1.getAddress()));
       const withdrawAmount = depositAmount1; // 1000 USDC
 
       let aBaseUSDCBalance = await aaveToken.balanceOf(strategy.address);
+      console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
       // Withdraw USDC from the strategy
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, user1, withdrawAmount);
       aBaseUSDCBalance = await aaveToken.balanceOf(strategy.address);
+      console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
+      console.log("amanaVaultBalance after withdrawal: ", await amanaVault.balanceOf(await user1.getAddress()));
 
       // Check that USDC is back in the amanaVault
       expect(aBaseUSDCBalance).to.be.closeTo(0, errorMargin); // Should have 0 aBaseUSDC tokens after investment

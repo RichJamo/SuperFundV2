@@ -50,7 +50,7 @@ describe("Vault and BaseMoonwellStrategy", function () {
 
       // Deploy Vault contract
       const Vault = await ethers.getContractFactory("GenericVault", owner);
-      amanaVault = await Vault.deploy("MoonwellUSDCVault", "MWV", BASE_USDC_ADDRESS);
+      amanaVault = await Vault.deploy("MoonwellUSDCVault", "MWV", BASE_USDC_ADDRESS, await owner.getAddress(), 1000);
 
       // Deploy BaseMoonwellStrategy contract and set the amanaVault address
       const BaseMoonwellStrategy = await ethers.getContractFactory("BaseMoonwellStrategy", owner);
