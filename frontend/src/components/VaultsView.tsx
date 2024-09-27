@@ -174,7 +174,7 @@ const VaultsView: React.FC<VaultsViewProps> = ({
         setTransactionAmount={setTransactionAmount}
         handleWithdraw={handleWithdraw}
         vaultBalance={selectedVault ? userVaultBalances.find((balance) => balance.vaultId === selectedVault.id)?.balance : "0"}
-        vaultTokenSymbol={selectedVault ? selectedVault.inputToken.symbol : ""} //ToDo - get from strategy contract
+        vaultTokenSymbol={selectedVault ? selectedVault.symbol : ""}
         isProcessing={isProcessing}
       />
     </div>

@@ -25,6 +25,8 @@ export interface Rate {
 
 export interface VaultData {
   id: string;
+  name: string;
+  symbol: string;
   inputToken: {
     symbol: string;
     decimals: number;
@@ -34,7 +36,6 @@ export interface VaultData {
     name: string;
     network: string;
   }
-  name: string;
 }
 
 export interface UserVaultBalance {

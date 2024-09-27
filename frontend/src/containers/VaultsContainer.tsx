@@ -74,7 +74,7 @@ const VaultsContainer = () => {
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch(); //refetches usdc balance of user
       setTimeout(() => {
-        // Trigger the custom hooks after a short delay
+        // Trigger the custom hook after a short delay
         setTransactionCompleted(!transactionCompleted);
       }, 1000);  // 1 second delay
     } catch (error) {
@@ -111,7 +111,7 @@ const VaultsContainer = () => {
       queryClient.invalidateQueries({ queryKey: ["walletBalance"] });
       refetch();
       setTimeout(() => {
-        // Trigger the custom hooks after a short delay
+        // Trigger the custom hook after a short delay
         setTransactionCompleted(!transactionCompleted);
       }, 1000);  // 1 second delay
     } catch (error) {
