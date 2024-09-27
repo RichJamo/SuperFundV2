@@ -15,7 +15,7 @@ export const MOONWELL_BASE_USDC_VAULT_ADDRESS = "0xc1256Ae5FF1cf2719D4937adb3bbC
 
 export const VAULT_DATA: VaultData[] = [
   {
-    id: "0x4AD5E74EC722aAf52Bf4D1ACfE0A3EC516746A4d", // Generic Amana Aave Vault on Base
+    id: "0xA92038e993F90F6A930074aA97af4eB288756048", // Generic Amana Aave Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -28,7 +28,7 @@ export const VAULT_DATA: VaultData[] = [
     name: "AaveV3 USDC",
   },
   {
-    id: "0x383a344C32c0787BAfea507b1D19097Ad049D7eD", // Generic Amana Moonwell Vault on Base
+    id: "0x3A5D0c81608A8c5D9159234e0d3858E8b5eEd3A4", // Generic Amana Moonwell Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -41,7 +41,7 @@ export const VAULT_DATA: VaultData[] = [
     name: "Moonwell Flagship USDC",
   },
   {
-    id: "0x1C08A4a21f32B18fD0B5Be916b2597D3033a0486", // Generic Amana Compound Vault on Base
+    id: "0x9ed7A0d7E038385634b63f990853afbEb30FD7aA", // Generic Amana Compound Vault on Base
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -54,7 +54,3 @@ export const VAULT_DATA: VaultData[] = [
     name: "Compound USDC",
   },
 ];
-
-
-
-// Other constants can be added here
