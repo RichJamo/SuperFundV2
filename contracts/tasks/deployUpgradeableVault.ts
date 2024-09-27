@@ -18,24 +18,32 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     );
   }
 
-  // Fetch the constructor parameters
-  const name = args.name || "GenericVault";
-  const symbol = args.symbol || "GV";
+  // Fetch the initializer parameters
+  const name = args.name || "UpgradeableVault";
+  const symbol = args.symbol || "UV";
   const assetaddress = args.assetaddress; // This should be passed as an argument
-  if (!assetaddress) {
-    throw new Error("🚨 Asset address is required");
+  const treasuryAddress = args.treasuryAddress; // Address for the treasury
+
+  // Set the default for performanceFeeRate if it's not provided
+  const performanceFeeRate = args.performanceFeeRate ?? 1500; // Default to 15% (1500 basis points)
+
+  if (!assetaddress || !treasuryAddress) {
+    throw new Error("🚨 Asset address and Treasury address are required.");
   }
 
-  // Deploy the GenericVault contract
-  const factory = await hre.ethers.getContractFactory("GenericVault");
-  const contract = await factory.deploy(name, symbol, assetaddress);
+  // Deploy the UpgradeableVault contract using OpenZeppelin Upgrades
+  const factory = await hre.ethers.getContractFactory("UpgradeableVault");
+  const contract = await hre.upgrades.deployProxy(factory, [name, symbol, assetaddress, treasuryAddress, performanceFeeRate], {
+    initializer: "initialize",
+  });
   console.log("Contract deployed, waiting for confirmations...");
 
   // Wait for 5 confirmations before proceeding
   await contract.deploymentTransaction().wait(5);
 
+
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed GenericVault on base.`);
+  console.log(`🚀 Successfully deployed UpgradeableVault on base.`);
   console.log(`📜 Contract address: ${contract.target}`);
 
   // Verify the contract on Basescan
@@ -44,7 +52,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     try {
       await hre.run("verify:verify", {
         address: contract.target,
-        constructorArguments: [name, symbol, assetaddress],
+        constructorArguments: [], // No constructor arguments for upgradeable contracts
       });
       console.log(`✅ Contract verified: https://basescan.org/address/${contract.target}`);
     } catch (err) {
@@ -59,11 +67,13 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   }
 };
 
-task("deploy-vault", "Deploy the GenericVault contract", main)
+task("deploy-upgradeable-vault", "Deploy the UpgradeableVault contract", main)
   .addFlag("json", "Output in JSON")
-  .addOptionalParam("name", "Token name", "GenericVault")
-  .addOptionalParam("symbol", "Token symbol", "GV")
-  .addParam("assetaddress", "The address of the asset ERC20 token");
+  .addOptionalParam("name", "Token name", "UpgradeableVault")
+  .addOptionalParam("symbol", "Token symbol", "UV")
+  .addParam("assetaddress", "The address of the asset ERC20 token")
+  .addParam("treasuryAddress", "The address of the treasury")
+  .addOptionalParam("performanceFeeRate", "Performance fee rate (basis points)"); // Remove the default here
 
 // Export the task so it can be used in hardhat
 export default {};

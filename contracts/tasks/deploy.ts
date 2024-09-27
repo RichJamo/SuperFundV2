@@ -33,7 +33,10 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   // Deploy the contract with all the necessary constructor parameters
   const factory = await hre.ethers.getContractFactory("ZRC4626");
   const contract = await factory.deploy(name, symbol, assetaddress, systemContract);
-  await contract.deployed();
+  console.log("Contract deployed, waiting for confirmations...");
+
+  // Wait for 5 confirmations before proceeding
+  await contract.deploymentTransaction().wait(5);
 
   const isTestnet = network === "zeta_testnet";
   const zetascan = isTestnet ? "athens.explorer" : "explorer";
@@ -45,9 +48,9 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
     console.log(`🔑 Using account: ${signer.address}
 
 🚀 Successfully deployed contract on ${network}.
-📜 Contract address: ${contract.address}
-🌍 ZetaScan: https://${zetascan}.zetachain.com/address/${contract.address}
-🌍 Blockcsout: https://${blockscout}.blockscout.com/address/${contract.address}
+📜 Contract address: ${contract.target}
+🌍 ZetaScan: https://${zetascan}.zetachain.com/address/${contract.target}
+🌍 Blockcsout: https://${blockscout}.blockscout.com/address/${contract.target}
 `);
   }
 };

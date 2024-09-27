@@ -4,13 +4,14 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   const network = hre.network.name;
 
-  // Ensure we're deploying on base
+  // Ensure we're deploying on the correct network (optional check)
   if (network !== "base") {
     throw new Error(
       '🚨 Please use the "base" network to deploy the contract.'
     );
   }
 
+  // Fetch the deployer account
   const [signer] = await hre.ethers.getSigners();
   if (!signer) {
     throw new Error(
@@ -19,32 +20,29 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   }
 
   // Fetch the constructor parameters
-  const name = args.name || "GenericVault";
-  const symbol = args.symbol || "GV";
-  const assetaddress = args.assetaddress; // This should be passed as an argument
-  if (!assetaddress) {
-    throw new Error("🚨 Asset address is required");
+  const governanceAddress = args.governance; // This should be passed as an argument
+  if (!governanceAddress) {
+    throw new Error("🚨 Governance address is required.");
   }
 
-  // Deploy the GenericVault contract
-  const factory = await hre.ethers.getContractFactory("GenericVault");
-  const contract = await factory.deploy(name, symbol, assetaddress);
+  // Deploy the Treasury contract
+  const factory = await hre.ethers.getContractFactory("Treasury");
+  const contract = await factory.deploy(governanceAddress);
   console.log("Contract deployed, waiting for confirmations...");
 
-  // Wait for 5 confirmations before proceeding
   await contract.deploymentTransaction().wait(5);
 
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed GenericVault on base.`);
+  console.log(`🚀 Successfully deployed Treasury on ${network}.`);
   console.log(`📜 Contract address: ${contract.target}`);
 
-  // Verify the contract on Basescan
+  // Verify the contract on Basescan or Etherscan
   if (network === "base" && hre.config.etherscan.apiKey.base) {
     console.log("🛠 Verifying contract on Basescan...");
     try {
       await hre.run("verify:verify", {
         address: contract.target,
-        constructorArguments: [name, symbol, assetaddress],
+        constructorArguments: [governanceAddress],
       });
       console.log(`✅ Contract verified: https://basescan.org/address/${contract.target}`);
     } catch (err) {
@@ -59,11 +57,9 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   }
 };
 
-task("deploy-vault", "Deploy the GenericVault contract", main)
+// Define the Hardhat task
+task("deploy-treasury", "Deploy the Treasury contract", main)
   .addFlag("json", "Output in JSON")
-  .addOptionalParam("name", "Token name", "GenericVault")
-  .addOptionalParam("symbol", "Token symbol", "GV")
-  .addParam("assetaddress", "The address of the asset ERC20 token");
+  .addParam("governance", "The address of the governance");
 
-// Export the task so it can be used in hardhat
 export default {};

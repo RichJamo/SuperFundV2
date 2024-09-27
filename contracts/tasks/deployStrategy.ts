@@ -45,21 +45,25 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
   // Deploy the BaseAaveStrategy contract
   const factory = await hre.ethers.getContractFactory(contractName);
   const contract = await factory.deploy(name, vault, inputToken, receiptToken);
-  await contract.deployed();
+  console.log("Contract deployed, waiting for confirmations...");
+
+  // Wait for 5 confirmations before proceeding
+  await contract.deploymentTransaction().wait(5);
+
 
   console.log(`🔑 Using account: ${signer.address}`);
   console.log(`🚀 Successfully deployed BaseAaveStrategy on base.`);
-  console.log(`📜 Contract address: ${contract.address}`);
+  console.log(`📜 Contract address: ${contract.target}`);
 
   // Verify the contract on Basescan
   if (network === "base" && hre.config.etherscan.apiKey.base) {
     console.log("🛠 Verifying contract on Basescan...");
     try {
       await hre.run("verify:verify", {
-        address: contract.address,
+        address: contract.target,
         constructorArguments: [name, vault, inputToken, receiptToken],
       });
-      console.log(`✅ Contract verified: https://basescan.io/address/${contract.address}`);
+      console.log(`✅ Contract verified: https://basescan.io/address/${contract.target}`);
     } catch (err) {
       console.error("❌ Contract verification failed:", err);
     }

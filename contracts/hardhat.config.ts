@@ -2,10 +2,13 @@ import "./tasks/interact";
 import "./tasks/deploy";
 import "./tasks/deployVault";
 import "./tasks/deployStrategy";
+import "./tasks/deployUpgradeableVault";
+import "./tasks/deployTreasury";
 
 import "@nomicfoundation/hardhat-toolbox";
 import "@zetachain/toolkit/tasks";
 import "@typechain/hardhat";
+import "@openzeppelin/hardhat-upgrades";
 
 import { getHardhatConfigNetworks } from "@zetachain/networks";
 import { HardhatUserConfig } from "hardhat/config";
