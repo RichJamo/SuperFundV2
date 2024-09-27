@@ -15,7 +15,9 @@ export const MOONWELL_BASE_USDC_VAULT_ADDRESS = "0xc1256Ae5FF1cf2719D4937adb3bbC
 
 export const VAULT_DATA: VaultData[] = [
   {
-    id: "0xA92038e993F90F6A930074aA97af4eB288756048", // Generic Amana Aave Vault on Base
+    id: "0xA92038e993F90F6A930074aA97af4eB288756048", // Upgradeable Amana Aave Vault on Base
+    name: "AaveV3 USDC",
+    symbol: "aAaveUSDC",
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -25,10 +27,11 @@ export const VAULT_DATA: VaultData[] = [
       name: "Aave",
       network: "Base",
     },
-    name: "AaveV3 USDC",
   },
   {
-    id: "0x3A5D0c81608A8c5D9159234e0d3858E8b5eEd3A4", // Generic Amana Moonwell Vault on Base
+    id: "0x3A5D0c81608A8c5D9159234e0d3858E8b5eEd3A4", // Upgradeable Amana Moonwell Vault on Base
+    name: "Moonwell Flagship USDC",
+    symbol: "aMoonwellUSDC",
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -38,10 +41,11 @@ export const VAULT_DATA: VaultData[] = [
       name: "Moonwell",
       network: "Base",
     },
-    name: "Moonwell Flagship USDC",
   },
   {
-    id: "0x9ed7A0d7E038385634b63f990853afbEb30FD7aA", // Generic Amana Compound Vault on Base
+    id: "0x9ed7A0d7E038385634b63f990853afbEb30FD7aA", // Upgradeable Amana Compound Vault on Base
+    name: "Compound USDC",
+    symbol: "aCompoundUSDC",
     inputToken: {
       symbol: "USDC",
       decimals: 6,
@@ -51,6 +55,5 @@ export const VAULT_DATA: VaultData[] = [
       name: "Compound",
       network: "Base",
     },
-    name: "Compound USDC",
   },
 ];
