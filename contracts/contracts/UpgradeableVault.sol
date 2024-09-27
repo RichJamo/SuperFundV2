@@ -23,20 +23,15 @@ contract UpgradeableVault is
     uint8 private _decimals;
     address public strategyAddress;
     address public treasuryAddress;
-    uint256 public performanceFeeRate;
+    uint16 public performanceFeeRate;
     uint256 private totalPrincipal;
 
-    struct AssetBreakdown {
-        uint256 principal;
-        uint256 profit;
-        uint256 fee;
-    }
-
-    mapping(address => AssetBreakdown) private userAssetBreakdown;
-    mapping(address => uint256) private netDeposits;
+    mapping(address => uint256) private userPrincipal;
 
     event StrategyUpdated(address indexed newStrategy);
     event PerformanceFeePaid(address indexed user, uint256 amount);
+    event PerformanceFeeUpdated(uint256 newFeeRate);
+    event VaultInitialized(uint8 decimals, uint256 performanceFeeRate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -51,8 +46,9 @@ contract UpgradeableVault is
         string memory symbol_,
         IERC20 asset_,
         address treasuryAddress_,
-        uint256 performanceFeeRate_
+        uint16 performanceFeeRate_
     ) external initializer {
+        require(treasuryAddress_ != address(0), "Invalid treasury address");
         __ERC20_init(name_, symbol_);
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
@@ -61,6 +57,8 @@ contract UpgradeableVault is
         _decimals = IERC20Metadata(address(asset_)).decimals();
         treasuryAddress = treasuryAddress_;
         performanceFeeRate = performanceFeeRate_;
+
+        emit VaultInitialized(_decimals, performanceFeeRate_);
     }
 
     /**
@@ -83,9 +81,10 @@ contract UpgradeableVault is
         treasuryAddress = _treasuryAddress;
     }
 
-    function setPerformanceFee(uint256 newFeeRate) external onlyOwner {
+    function setPerformanceFee(uint16 newFeeRate) external onlyOwner {
         require(newFeeRate <= 2000, "Fee must be less than or equal to 20%");
         performanceFeeRate = newFeeRate;
+        emit PerformanceFeeUpdated(newFeeRate);
     }
 
     function switchStrategy(address newStrategy) external onlyOwner {
@@ -98,18 +97,20 @@ contract UpgradeableVault is
             "New strategy must be different"
         );
 
-        uint256 strategyBalance = IStrategy(strategyAddress)
-            .totalUnderlyingAssets();
-        if (strategyBalance > 0) {
-            IStrategy(strategyAddress).withdraw(strategyBalance);
-        }
-
+        address oldStrategy = strategyAddress;
         strategyAddress = newStrategy;
         emit StrategyUpdated(newStrategy);
 
+        uint256 strategyBalance = IStrategy(oldStrategy)
+            .totalUnderlyingAssets();
+        if (strategyBalance > 0) {
+            IStrategy(oldStrategy).withdraw(strategyBalance);
+        }
+
         uint256 vaultBalance = _asset.balanceOf(address(this));
         if (vaultBalance > 0) {
-            _asset.approve(strategyAddress, vaultBalance);
+            bool success = _asset.approve(strategyAddress, vaultBalance);
+            require(success, "Approval failed");
             IStrategy(strategyAddress).invest(vaultBalance);
         }
     }
@@ -190,16 +191,16 @@ contract UpgradeableVault is
 
     /** @dev See {IERC4626-maxWithdraw}. */
     function maxWithdraw(
-        address owner
+        address user
     ) public view virtual override returns (uint256) {
-        return _convertToAssets(balanceOf(owner), Math.Rounding.Floor);
+        return _convertToAssets(balanceOf(user), Math.Rounding.Floor);
     }
 
     /** @dev See {IERC4626-maxRedeem}. */
     function maxRedeem(
-        address owner
+        address user
     ) public view virtual override returns (uint256) {
-        return balanceOf(owner);
+        return balanceOf(user);
     }
 
     /** @dev See {IERC4626-previewDeposit}. */
@@ -241,19 +242,20 @@ contract UpgradeableVault is
         );
 
         uint256 shares = previewDeposit(assets);
+
+        userPrincipal[receiver] += assets;
+        totalPrincipal += assets;
+
         _deposit(_msgSender(), receiver, assets, shares);
 
-        // Update the user's principal
-        userAssetBreakdown[receiver].principal += assets; // TODO check for re-entrancy
-        totalPrincipal += assets;
-        // Allocate the deposited assets to the strategy
         allocateToStrategy(assets);
 
         return shares;
     }
 
     function allocateToStrategy(uint256 amount) private {
-        _asset.approve(strategyAddress, amount);
+        bool success = _asset.approve(strategyAddress, amount);
+        require(success, "Approval failed");
         IStrategy(strategyAddress).invest(amount);
     }
 
@@ -269,10 +271,11 @@ contract UpgradeableVault is
         require(shares <= maxMint(receiver), "ERC4626: mint more than max");
 
         uint256 assets = previewMint(shares);
-        _deposit(_msgSender(), receiver, assets, shares);
 
-        userAssetBreakdown[receiver].principal += assets;
+        userPrincipal[receiver] += assets;
         totalPrincipal += assets;
+
+        _deposit(_msgSender(), receiver, assets, shares);
 
         return assets;
     }
@@ -283,24 +286,21 @@ contract UpgradeableVault is
     function withdraw(
         uint256 assets,
         address receiver,
-        address owner
+        address user
     ) public virtual override returns (uint256) {
-        require(
-            assets <= maxWithdraw(owner),
-            "ERC4626: withdraw more than max"
-        );
+        require(assets <= maxWithdraw(user), "ERC4626: withdraw more than max");
 
         uint256 shares = previewWithdraw(assets);
 
-        uint256 feeWithdrawn = _calculateAndApplyFee(owner, assets);
+        uint256 feeWithdrawn = _calculateAndApplyFee(user, assets);
 
         IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
         if (feeWithdrawn > 0) {
+            emit PerformanceFeePaid(user, feeWithdrawn);
             SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
-            emit PerformanceFeePaid(owner, feeWithdrawn);
         }
 
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _withdraw(_msgSender(), receiver, user, assets, shares);
         return shares;
     }
 
@@ -310,56 +310,53 @@ contract UpgradeableVault is
     function redeem(
         uint256 shares,
         address receiver,
-        address owner
+        address user
     ) public virtual override returns (uint256) {
-        require(shares <= maxRedeem(owner), "ERC4626: redeem more than max");
+        require(shares <= maxRedeem(user), "ERC4626: redeem more than max");
 
         uint256 assets = previewRedeem(shares);
 
-        uint256 feeWithdrawn = _calculateAndApplyFee(owner, assets);
+        uint256 feeWithdrawn = _calculateAndApplyFee(user, assets);
 
         IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
 
         if (feeWithdrawn > 0) {
+            emit PerformanceFeePaid(user, feeWithdrawn);
             SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
-            emit PerformanceFeePaid(owner, feeWithdrawn);
         }
 
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        _withdraw(_msgSender(), receiver, user, assets, shares);
 
         return assets;
     }
 
     function _calculateAndApplyFee(
-        address owner,
+        address user,
         uint256 assets
     ) internal returns (uint256 feeWithdrawn) {
-        AssetBreakdown storage breakdown = userAssetBreakdown[owner];
-        uint256 totalUserAssets = convertToAssets(balanceOf(owner));
+        uint256 principal = userPrincipal[user];
+        uint256 totalUserAssets = convertToAssets(balanceOf(user));
         uint256 principalWithdrawn;
+        uint256 profit;
+        uint256 fee;
 
-        if (totalUserAssets > breakdown.principal) {
-            breakdown.profit = totalUserAssets - breakdown.principal;
+        if (totalUserAssets > principal) {
+            profit = totalUserAssets - principal;
 
-            breakdown.fee =
-                (breakdown.profit * performanceFeeRate) /
-                (10000 - performanceFeeRate);
+            fee = (profit * performanceFeeRate) / (10000 - performanceFeeRate);
 
-            principalWithdrawn =
-                (assets * breakdown.principal) /
-                totalUserAssets;
+            principalWithdrawn = (assets * principal) / totalUserAssets;
             uint256 profitWithdrawn = assets - principalWithdrawn;
-            feeWithdrawn = (breakdown.fee * profitWithdrawn) / breakdown.profit;
 
-            breakdown.principal -= principalWithdrawn;
-            breakdown.profit -= profitWithdrawn;
-            breakdown.fee -= feeWithdrawn;
+            feeWithdrawn =
+                (profit * performanceFeeRate * profitWithdrawn) /
+                (profit * (10000 - performanceFeeRate));
+
+            userPrincipal[user] -= principalWithdrawn;
         } else {
             principalWithdrawn = assets;
             feeWithdrawn = 0;
-            breakdown.principal -= principalWithdrawn;
-            breakdown.profit = 0;
-            breakdown.fee = 0;
+            userPrincipal[user] -= principalWithdrawn;
         }
 
         totalPrincipal -= principalWithdrawn;
@@ -462,12 +459,12 @@ contract UpgradeableVault is
     function _withdraw(
         address caller,
         address receiver,
-        address owner,
+        address user,
         uint256 assets,
         uint256 shares
     ) internal override {
-        if (caller != owner) {
-            _spendAllowance(owner, caller, shares);
+        if (caller != user) {
+            _spendAllowance(user, caller, shares);
         }
 
         // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
@@ -476,10 +473,10 @@ contract UpgradeableVault is
         //
         // Conclusion: we need to do the transfer after the burn so that any reentrancy would happen after the
         // shares are burned and after the assets are transferred, which is a valid state.
-        _burn(owner, shares);
+        _burn(user, shares);
         SafeERC20.safeTransfer(_asset, receiver, assets);
 
-        emit Withdraw(caller, receiver, owner, assets, shares);
+        emit Withdraw(caller, receiver, user, assets, shares);
     }
 
     /**
