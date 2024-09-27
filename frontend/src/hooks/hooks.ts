@@ -24,9 +24,7 @@ export const useUpdateVaultBalanceAndTotal = (
                 activeAccount?.address as Address,
                 vault.id as Address
               );
-              console.log(`Fetched balance for vault ${vault.id}:`, balance);
               const newTotalAssets = await fetchTotalAssets(vault.id as Address);
-              console.log(`Vault ${vault.id} - New total assets:`, newTotalAssets);
               return {
                 vaultId: vault.id,
                 balance,
@@ -55,7 +53,6 @@ export const useUpdateVaultBalanceAndTotal = (
 
         setUserVaultBalances(balances); // Update user balances
         setVaultTotalAssets(totalAssets); // Update total assets
-        console.log("Updated userVaultBalances and vaultTotalAssets", balancesAndAssets);
       } catch (error) {
         console.error("Error updating vault balances and total assets:", error);
       }
@@ -76,7 +73,6 @@ export const useUpdateAPYs = (
   useEffect(() => {
     const updateAPYs = async () => {
       try {
-        console.log("Updating APYs");
         const updatedVaultAPYs = await Promise.all(
           vaults.map(async (vault) => {
             try {
@@ -90,21 +86,20 @@ export const useUpdateAPYs = (
                 contract,
                 method: "function strategyAddress() view returns (address)",
               });
-
               const strategyContract = getContract({
                 client,
                 chain: base,
                 address: strategyAddress,
               });
 
+              const receiptTokenAddress = await readContract({
+                contract: strategyContract,
+                method: "function receiptToken() view returns (address)",
+              });
+
               let APY7d = 0;
 
               if (vault.protocol.name === "Aave") {
-                const receiptTokenAddress = await readContract({
-                  contract: strategyContract,
-                  method: "function aaveReceiptToken() view returns (address)",
-                });
-
                 const receiptTokenContract = getContract({
                   client,
                   chain: base,
@@ -115,22 +110,11 @@ export const useUpdateAPYs = (
                   contract: receiptTokenContract,
                   method: "function POOL() view returns (address)",
                 });
-
                 APY7d = await calculateAaveAPY(poolAddress as Address, vault.inputToken.address as Address);
               } else if (vault.protocol.name === "Compound") {
-                const receiptTokenAddress = await readContract({
-                  contract: strategyContract,
-                  method: "function receiptToken() view returns (address)",
-                });
-
                 APY7d = await calculateCompoundAPY(receiptTokenAddress as Address);
               }
               else {
-                const receiptTokenAddress = await readContract({
-                  contract: strategyContract,
-                  method: "function receiptToken() view returns (address)",
-                });
-
                 APY7d = await calculateMoonwellAPY(receiptTokenAddress as Address);
               }
 

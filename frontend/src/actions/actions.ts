@@ -17,7 +17,6 @@ const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_ALCHEMY_RPC_URL_BAS
 
 export async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: Address) {
   const aaveLendingPool = new ethers.Contract(poolAddress, lendingPoolABI, provider);
-
   const averageBlockTimeInSeconds = 2;
   const secondsInADay = 24 * 60 * 60;
   const secondsIn7Days = 7 * secondsInADay;
@@ -34,7 +33,6 @@ export async function calculateAaveAPY(poolAddress: Address, inputTokenAddress: 
 
   const rateOfChange = (currentLiquidityIndex - pastLiquidityIndex) * 10n ** 18n / pastLiquidityIndex;
   const normalizedRateOfChange = Number(rateOfChange) / Number(10n ** 18n);
-
   return Math.pow(1 + normalizedRateOfChange, 365 / 7) - 1;
 }
 
@@ -71,7 +69,6 @@ export async function calculateCompoundAPY(receiptTokenAddress: Address) {
   const currentSupplyRateScaled = Number(currentSupplyRate) / Number(1e18);
 
   const currentAPY = Math.pow(1 + currentSupplyRateScaled, secondsInAYear) - 1;
-  console.log("currentAPY", currentAPY);
   return currentAPY;
 }
 
@@ -174,7 +171,6 @@ export const updateAPYs = async (vaultData: VaultData[]): Promise<VaultData[]> =
         });
         let APY7d = 0;
         if (vault.protocol.name === "Aave") {
-          console.log("Calculating Aave 7d APY")
           const receiptTokenAddress = await readContract({
             contract: strategyContract,
             method: "function aaveReceiptToken() view returns (address)",
@@ -192,7 +188,6 @@ export const updateAPYs = async (vaultData: VaultData[]): Promise<VaultData[]> =
           });
 
           APY7d = await calculateAaveAPY(poolAddress as Address, vault.inputToken.address as Address);
-          console.log("APY7d", APY7d);
         } else {
           // Generic logic for other vaults (e.g., Moonwell)
           const receiptTokenAddress = await readContract({
