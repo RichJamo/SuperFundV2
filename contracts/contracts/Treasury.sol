@@ -15,6 +15,11 @@ contract Treasury {
         _;
     }
 
+    function setGovernance(address _governance) external onlyGovernance {
+        require(_governance != address(0), "Invalid governance address");
+        governance = _governance;
+    }
+
     // Ether deposit function
     function depositEther() external payable {}
 
