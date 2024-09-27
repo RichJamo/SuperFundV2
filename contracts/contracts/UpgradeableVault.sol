@@ -1,72 +1,74 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.8.1) (token/ERC20/extensions/ERC4626.sol)
-
 pragma solidity 0.8.26;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IStrategy.sol";
-/**
- * @dev Implementation of the ERC4626 "Tokenized Vault Standard" as defined in
- * https://eips.ethereum.org/EIPS/eip-4626[EIP-4626].
- *
- * This extension allows the minting and burning of "shares" (represented using the ERC20 inheritance) in exchange for
- * underlying "assets" through standardized {deposit}, {mint}, {redeem} and {burn} workflows. This contract extends
- * the ERC20 standard. Any additional extensions included along it would affect the "shares" token represented by this
- * contract and not the "assets" token which is an independent contract.
- *
- * CAUTION: When the vault is empty or nearly empty, deposits are at high risk of being stolen through frontrunning with
- * a "donation" to the vault that inflates the price of a share. This is variously known as a donation or inflation
- * attack and is essentially a problem of slippage. Vault deployers can protect against this attack by making an initial
- * deposit of a non-trivial amount of the asset, such that price manipulation becomes infeasible. Withdrawals may
- * similarly be affected by slippage. Users can protect against this attack as well unexpected slippage in general by
- * verifying the amount received is as expected, using a wrapper that performs these checks such as
- * https://github.com/fei-protocol/ERC4626#erc4626router-and-base[ERC4626Router].
- *
- * _Available since v4.7._
- */
-contract GenericVault is ERC20, IERC4626, Ownable {
-    using Math for uint256;
 
-    IERC20 private immutable _asset;
-    uint8 private immutable _decimals;
+contract UpgradeableVault is
+    Initializable,
+    ERC20Upgradeable,
+    ERC4626Upgradeable,
+    UUPSUpgradeable,
+    OwnableUpgradeable
+{
+    using SafeERC20 for IERC20;
+
+    IERC20 private _asset;
+    uint8 private _decimals;
     address public strategyAddress;
     address public treasuryAddress;
-    uint256 public performanceFeeRate = 1000; // 10%
+    uint256 public performanceFeeRate;
     uint256 private totalPrincipal;
 
     struct AssetBreakdown {
-        uint256 principal; // Total user deposits
-        uint256 profit; // Profit above the principal
-        uint256 fee; // Performance fee on the profit
+        uint256 principal;
+        uint256 profit;
+        uint256 fee;
     }
 
     mapping(address => AssetBreakdown) private userAssetBreakdown;
-
     mapping(address => uint256) private netDeposits;
 
     event StrategyUpdated(address indexed newStrategy);
     event PerformanceFeePaid(address indexed user, uint256 amount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /**
-     * @dev Set the underlying asset contract. This must be an ERC20-compatible contract (ERC20 or ERC777).
+     * @dev Initializer function to replace the constructor in upgradeable contracts.
      */
-    constructor(
+    function initialize(
         string memory name_,
         string memory symbol_,
         IERC20 asset_,
         address treasuryAddress_,
-        uint256 performanceFeeRate_ // 1000 = 10%
-    ) ERC20(name_, symbol_) Ownable(msg.sender) {
-        (bool success, uint8 assetDecimals) = _tryGetAssetDecimals(asset_);
-        _decimals = success ? assetDecimals : super.decimals();
+        uint256 performanceFeeRate_
+    ) external initializer {
+        __ERC20_init(name_, symbol_);
+        __Ownable_init(msg.sender);
+        __UUPSUpgradeable_init();
+
         _asset = asset_;
+        _decimals = IERC20Metadata(address(asset_)).decimals();
         treasuryAddress = treasuryAddress_;
         performanceFeeRate = performanceFeeRate_;
     }
+
+    /**
+     * @dev UUPS upgrade authorization
+     */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
 
     function setStrategy(address _strategyAddress) external onlyOwner {
         require(_strategyAddress != address(0), "Invalid strategy address");
@@ -116,24 +118,6 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         require(balance > 0, "No ETH to withdraw");
         payable(owner()).transfer(balance);
     }
-    /**
-     * @dev Attempts to fetch the asset decimals. A return value of false indicates that the attempt failed in some way.
-     */
-    function _tryGetAssetDecimals(
-        IERC20 asset_
-    ) private view returns (bool, uint8) {
-        (bool success, bytes memory encodedDecimals) = address(asset_)
-            .staticcall(
-                abi.encodeWithSelector(IERC20Metadata.decimals.selector)
-            );
-        if (success && encodedDecimals.length >= 32) {
-            uint256 returnedDecimals = abi.decode(encodedDecimals, (uint256));
-            if (returnedDecimals <= type(uint8).max) {
-                return (true, uint8(returnedDecimals));
-            }
-        }
-        return (false, 0);
-    }
 
     /**
      * @dev Decimals are read from the underlying asset in the constructor and cached. If this fails (e.g., the asset
@@ -145,7 +129,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         public
         view
         virtual
-        override(IERC20Metadata, ERC20)
+        override(ERC20Upgradeable, ERC4626Upgradeable)
         returns (uint8)
     {
         return _decimals;
@@ -383,7 +367,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     function _convertToShares(
         uint256 assets,
         Math.Rounding rounding
-    ) internal view virtual returns (uint256 shares) {
+    ) internal view override returns (uint256 shares) {
         uint256 supply = totalSupply();
         uint256 totalAssetsNetOfFee;
         totalAssets() > totalPrincipal
@@ -395,7 +379,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         return
             (assets == 0 || supply == 0)
                 ? _initialConvertToShares(assets, rounding)
-                : assets.mulDiv(supply, totalAssetsNetOfFee, rounding);
+                : Math.mulDiv(assets, supply, totalAssetsNetOfFee, rounding);
     }
 
     /**
@@ -416,7 +400,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
     function _convertToAssets(
         uint256 shares,
         Math.Rounding rounding
-    ) internal view virtual returns (uint256 assets) {
+    ) internal view override returns (uint256 assets) {
         uint256 supply = totalSupply();
         uint256 totalAssetsNetOfFee;
         totalAssets() > totalPrincipal
@@ -428,7 +412,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         return
             (supply == 0)
                 ? _initialConvertToAssets(shares, rounding)
-                : shares.mulDiv(totalAssetsNetOfFee, supply, rounding);
+                : Math.mulDiv(shares, totalAssetsNetOfFee, supply, rounding);
     }
 
     /**
@@ -451,7 +435,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal override {
         // If _asset is ERC777, `transferFrom` can trigger a reenterancy BEFORE the transfer happens through the
         // `tokensToSend` hook. On the other hand, the `tokenReceived` hook, that is triggered after the transfer,
         // calls the vault, which is assumed not malicious.
@@ -474,7 +458,7 @@ contract GenericVault is ERC20, IERC4626, Ownable {
         address owner,
         uint256 assets,
         uint256 shares
-    ) internal virtual {
+    ) internal override {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }

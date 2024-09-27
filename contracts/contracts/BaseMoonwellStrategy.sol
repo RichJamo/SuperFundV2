@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.26;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -19,7 +19,7 @@ contract BaseMoonwellStrategy is Ownable {
         address _amanaVault,
         address _inputTokenAddress,
         address _receiptTokenAddress
-    ) {
+    ) Ownable(msg.sender) {
         name = _name;
         amanaVault = _amanaVault;
         inputToken = IERC20(_inputTokenAddress); // could get this from amanaVault

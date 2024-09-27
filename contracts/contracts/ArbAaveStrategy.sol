@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.26;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -19,7 +19,7 @@ contract AaveStrategy is Ownable {
     IAavePool public aavePool;
     IERC20 public aaveReceiptToken;
 
-    constructor(address _amanaVault) {
+    constructor(address _amanaVault) Ownable(msg.sender) {
         amanaVault = _amanaVault;
         usdc = IERC20(ARB_USDC_CONTRACT_ADDRESS);
         aavePool = IAavePool(ARB_AAVE_POOL_ADDRESS);
