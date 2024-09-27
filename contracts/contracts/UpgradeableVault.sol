@@ -76,6 +76,13 @@ contract UpgradeableVault is
         emit StrategyUpdated(_strategyAddress);
     }
 
+    function updateTreasuryAddress(
+        address _treasuryAddress
+    ) external onlyOwner {
+        require(_treasuryAddress != address(0), "Invalid treasury address");
+        treasuryAddress = _treasuryAddress;
+    }
+
     function setPerformanceFee(uint256 newFeeRate) external onlyOwner {
         require(newFeeRate <= 2000, "Fee must be less than or equal to 20%");
         performanceFeeRate = newFeeRate;
