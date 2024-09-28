@@ -1,19 +1,19 @@
-import { ethers, network } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
-import { Contract, Signer } from "ethers";
+import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
+import { UpgradeableVault, IAavePool, BaseAaveStrategy, IERC20 } from "../typechain";
 
-import { IERC20 } from "../typechain-types";
 import { BASE_USDC_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_AAVE_POOL_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_AAVE_RECEIPT_TOKEN_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_USDC_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
 
 describe("Vault and BaseAaveStrategy", function () {
-  let amanaVault: Contract;
-  let strategy: Contract;
+  let amanaVault: UpgradeableVault;
+  let strategy: BaseAaveStrategy;
   let usdc: IERC20;
-  let aavePool: Contract;
+  let aavePool: IAavePool;
   let aaveToken: IERC20;
   let owner: Signer;
   let user1: Signer;
@@ -54,23 +54,34 @@ describe("Vault and BaseAaveStrategy", function () {
       aavePool = await ethers.getContractAt("IAavePool", BASE_AAVE_POOL_ADDRESS);
       aaveToken = await ethers.getContractAt("IERC20", BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
 
-      // Deploy Vault contract
-      const Vault = await ethers.getContractFactory("GenericVault", owner);
-      amanaVault = await Vault.deploy("AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS, await owner.getAddress(), 1000);
+      // Deploy the UpgradeableVault using OpenZeppelin's upgrade proxy pattern
+      const Vault = await ethers.getContractFactory("UpgradeableVault");
+      console.log("Deploying UpgradeableVault...");
+      // Use the upgrades library to deploy the proxy
+      amanaVault = await upgrades.deployProxy(
+        Vault,
+        ["AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS, await owner.getAddress(), 1000],
+        { initializer: "initialize" }
+      );
+      console.log("UpgradeableVault deployed...");
+      // Wait for deployment confirmations
+      // await amanaVault.deploymentTransaction().wait(5);
+
+      console.log(`UpgradeableVault deployed at: ${await amanaVault.getAddress()}`);
 
       // Deploy BaseAaveStrategy contract and set the amanaVault address
       const BaseAaveStrategy = await ethers.getContractFactory("BaseAaveStrategy", owner);
-      strategy = await BaseAaveStrategy.deploy("AaveV3USDC", amanaVault.address, BASE_USDC_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
+      strategy = await BaseAaveStrategy.deploy("AaveV3USDC", await amanaVault.getAddress(), BASE_USDC_ADDRESS, BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
 
       // Set the strategy address in the amanaVault
-      await amanaVault.setStrategy(strategy.address);
+      await amanaVault.setStrategy(await strategy.getAddress());
 
       // Impersonate USDC holder
       const usdcHolder = await ethers.getImpersonatedSigner(BASE_USDC_HOLDER_ADDRESS);
 
       // Set the initial balances for user1 and user2
-      const depositAmount1 = ethers.utils.parseUnits("1000", 6); // 1000 USDC for user1
-      const depositAmount2 = ethers.utils.parseUnits("500", 6); // 500 USDC for user2
+      const depositAmount1 = ethers.parseUnits("1000", 6); // 1000 USDC for user1
+      const depositAmount2 = ethers.parseUnits("500", 6); // 500 USDC for user2
 
       await usdc.connect(usdcHolder).transfer(await user1.getAddress(), depositAmount1);
       await usdc.connect(usdcHolder).transfer(await user2.getAddress(), depositAmount2);
@@ -79,13 +90,13 @@ describe("Vault and BaseAaveStrategy", function () {
     it("should invest USDC into Aave via the strategy", async function () {
       const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
 
-      await usdc.connect(user1).approve(amanaVault.address, depositAmount1);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
 
       // Deposit USDC into the amanaVault
       expect(await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress())).to.changeTokenBalance(usdc, user1, depositAmount1);
 
       // Check that the strategy has invested in Aave
-      const aBaseUSDCBalance = await aaveToken.balanceOf(strategy.address);
+      const aBaseUSDCBalance = await aaveToken.balanceOf(await strategy.getAddress());
 
       expect(aBaseUSDCBalance).to.be.closeTo(depositAmount1, errorMargin); // Should have 1000 aBaseUSDC tokens after investment
       expect(await amanaVault.totalAssets()).to.be.closeTo(depositAmount1, errorMargin); // Vault should have the same amount of assets
@@ -94,18 +105,18 @@ describe("Vault and BaseAaveStrategy", function () {
 
     it("should withdraw USDC from Aave via the strategy", async function () {
       const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
-      await usdc.connect(user1).approve(amanaVault.address, depositAmount1);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
 
       // Deposit USDC into the amanaVault
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
       console.log("amanaVaultBalance after deposit: ", await amanaVault.balanceOf(await user1.getAddress()));
       const withdrawAmount = depositAmount1; // 1000 USDC
 
-      let aBaseUSDCBalance = await aaveToken.balanceOf(strategy.address);
+      let aBaseUSDCBalance = await aaveToken.balanceOf(await strategy.getAddress());
       console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
       // Withdraw USDC from the strategy
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, user1, withdrawAmount);
-      aBaseUSDCBalance = await aaveToken.balanceOf(strategy.address);
+      aBaseUSDCBalance = await aaveToken.balanceOf(await strategy.getAddress());
       console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
       console.log("amanaVaultBalance after withdrawal: ", await amanaVault.balanceOf(await user1.getAddress()));
 
@@ -119,15 +130,15 @@ describe("Vault and BaseAaveStrategy", function () {
       const { user1, user2, depositAmount1, depositAmount2, usdc, amanaVault } = await loadFixture(setup);
 
       // User1 and User2 approve and deposit
-      await usdc.connect(user1).approve(amanaVault.address, depositAmount1);
-      await usdc.connect(user2).approve(amanaVault.address, depositAmount2);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
+      await usdc.connect(user2).approve(await amanaVault.getAddress(), depositAmount2);
 
       expect(await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress())).to.changeTokenBalance(usdc, user1, depositAmount1);
       expect(await amanaVault.connect(user2).deposit(depositAmount2, await user2.getAddress())).to.changeTokenBalance(usdc, user2, depositAmount2);
 
       // Check total assets and user balances
       const totalAssets = await amanaVault.totalAssets();
-      expect(totalAssets).to.be.closeTo(depositAmount1.add(depositAmount2), errorMargin);
+      expect(totalAssets).to.be.closeTo(depositAmount1 + depositAmount2, errorMargin);
 
       const user1VaultBalance = await amanaVault.balanceOf(await user1.getAddress());
       const user2VaultBalance = await amanaVault.balanceOf(await user2.getAddress());
@@ -139,8 +150,8 @@ describe("Vault and BaseAaveStrategy", function () {
     it("should handle withdrawals from two different users", async function () {
       const { user1, user2, depositAmount1, depositAmount2, usdc, amanaVault } = await loadFixture(setup);
       // User1 and User2 approve and deposit
-      await usdc.connect(user1).approve(amanaVault.address, depositAmount1);
-      await usdc.connect(user2).approve(amanaVault.address, depositAmount2);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
+      await usdc.connect(user2).approve(await amanaVault.getAddress(), depositAmount2);
 
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
       await amanaVault.connect(user2).deposit(depositAmount2, await user2.getAddress());

@@ -9,6 +9,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@zetachain/toolkit/tasks";
 import "@typechain/hardhat";
 import "@openzeppelin/hardhat-upgrades";
+import "@nomicfoundation/hardhat-ethers"; // For ethers v6 compatibility
 
 import { getHardhatConfigNetworks } from "@zetachain/networks";
 import { HardhatUserConfig } from "hardhat/config";
@@ -62,7 +63,7 @@ const config: HardhatUserConfig = {
   },
   typechain: {
     outDir: "typechain",  // This is where Typechain outputs the generated types
-    target: "ethers-v5",  // Target ethers.js
+    target: "ethers-v6",  // Target ethers.js
   },
 };
 
