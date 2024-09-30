@@ -1,4 +1,4 @@
-import { VaultData } from "../types";
+import { VaultData } from "../types/types";
 
 export const OPTIMISM_USDC_CONTRACT_ADDRESS = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85";
 export const ARB_USDC_CONTRACT_ADDRESS = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
@@ -16,7 +16,7 @@ export const COMPOUND_BASE_USDC_VAULT_ADDRESS = "0xb125E6687d4313864e53df431d542
 
 export const VAULT_DATA: VaultData[] = [
   {
-    id: "0xA92038e993F90F6A930074aA97af4eB288756048", // Upgradeable Amana Aave Vault on Base
+    id: "0x916b2a7312783Cf1538f6aAcFa1850fD24De205d", // Upgradeable Amana Aave Vault on Base
     name: "AaveV3 USDC",
     symbol: "aAaveUSDC",
     inputToken: {
@@ -30,7 +30,7 @@ export const VAULT_DATA: VaultData[] = [
     },
   },
   {
-    id: "0x3A5D0c81608A8c5D9159234e0d3858E8b5eEd3A4", // Upgradeable Amana Moonwell Vault on Base
+    id: "0xFa99a92B181a24bE8f6144620F55615639BcD53a", // Upgradeable Amana Moonwell Vault on Base
     name: "Moonwell Flagship USDC",
     symbol: "aMoonwellUSDC",
     inputToken: {
@@ -44,7 +44,7 @@ export const VAULT_DATA: VaultData[] = [
     },
   },
   {
-    id: "0x9ed7A0d7E038385634b63f990853afbEb30FD7aA", // Upgradeable Amana Compound Vault on Base
+    id: "0x9d4d38e8a68390643E436AdB7Af2e80b2f7536bc", // Upgradeable Amana Compound Vault on Base
     name: "Compound USDC",
     symbol: "aCompoundUSDC",
     inputToken: {
