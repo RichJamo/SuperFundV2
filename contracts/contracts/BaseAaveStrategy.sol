@@ -13,10 +13,10 @@ import "./interfaces/IAaveReceiptToken.sol";
 
 contract BaseAaveStrategy is Ownable {
     string public name;
-    address public amanaVault;
-    IERC20 public inputToken;
-    IAavePool public aavePool;
-    IAaveReceiptToken public receiptToken;
+    address public immutable amanaVault;
+    IERC20 public immutable inputToken;
+    IAavePool public immutable aavePool;
+    IAaveReceiptToken public immutable receiptToken;
 
     constructor(
         string memory _name,
@@ -24,6 +24,7 @@ contract BaseAaveStrategy is Ownable {
         address _inputTokenAddress,
         address _receiptTokenAddress
     ) Ownable(msg.sender) {
+        require(_amanaVault != address(0), "Invalid amanaVault address");
         name = _name;
         amanaVault = _amanaVault;
         inputToken = IERC20(_inputTokenAddress);
@@ -43,12 +44,18 @@ contract BaseAaveStrategy is Ownable {
             address(this),
             amount
         );
-        inputToken.approve(address(aavePool), amount);
-        aavePool.supply(address(inputToken), amount, address(this), 0); // msg.sender or address(this)?
+        bool success = inputToken.approve(address(aavePool), amount);
+        require(success, "Approval failed");
+        aavePool.supply(address(inputToken), amount, address(this), 0);
     }
 
     function withdraw(uint256 _amount) external onlyVault {
-        aavePool.withdraw(address(inputToken), _amount, msg.sender);
+        uint256 withdrawn = aavePool.withdraw(
+            address(inputToken),
+            _amount,
+            msg.sender
+        );
+        require(withdrawn == _amount, "Token withdrawal failed");
     }
 
     function totalUnderlyingAssets() external view returns (uint256) {

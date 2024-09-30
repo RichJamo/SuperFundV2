@@ -10,9 +10,9 @@ import "./interfaces/ICompoundVault.sol";
 
 contract BaseCompoundStrategy is Ownable {
     string public name;
-    address public amanaVault;
-    IERC20 public inputToken;
-    ICompoundVault public receiptToken;
+    address public immutable amanaVault;
+    IERC20 public immutable inputToken;
+    ICompoundVault public immutable receiptToken;
 
     constructor(
         string memory _name,
@@ -20,6 +20,7 @@ contract BaseCompoundStrategy is Ownable {
         address _inputTokenAddress,
         address _receiptTokenAddress
     ) Ownable(msg.sender) {
+        require(_amanaVault != address(0), "Invalid amanaVault address");
         name = _name;
         amanaVault = _amanaVault;
         inputToken = IERC20(_inputTokenAddress); // could get this from amanaVault
@@ -38,7 +39,8 @@ contract BaseCompoundStrategy is Ownable {
             address(this),
             amount
         );
-        inputToken.approve(address(receiptToken), amount);
+        bool success = inputToken.approve(address(receiptToken), amount);
+        require(success, "Approval failed");
         receiptToken.supply(address(inputToken), amount);
     }
 
