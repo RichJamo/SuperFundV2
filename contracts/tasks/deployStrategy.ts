@@ -52,7 +52,7 @@ const main = async (args: any, hre: HardhatRuntimeEnvironment) => {
 
 
   console.log(`🔑 Using account: ${signer.address}`);
-  console.log(`🚀 Successfully deployed BaseAaveStrategy on base.`);
+  console.log(`🚀 Successfully deployed ${name} on base.`);
   console.log(`📜 Contract address: ${contract.target}`);
 
   // Verify the contract on Basescan
