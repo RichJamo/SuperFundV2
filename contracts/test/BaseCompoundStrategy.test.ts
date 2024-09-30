@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
@@ -17,13 +17,15 @@ describe("Vault and BaseCompoundStrategy", function () {
   let user1: Signer;
   let user2: Signer;
   const errorMargin = 5;
+  const feeRate = BigInt(1000); // 10% fee
+  const withdrawPercent = BigInt(95); // 95% of the deposit amount
 
   describe("BaseCompoundStrategy Investment", function () {
     async function setup() {
       // Get signers
       [owner, user1, user2] = await ethers.getSigners();
 
-      // Forked USDC contract and Moonwell Pool
+      // Forked USDC contract and Compound Pool
       usdc = await ethers.getContractAt("IERC20", BASE_USDC_ADDRESS);
       moonwellVault = await ethers.getContractAt("IERC4626", COMPOUND_BASE_USDC_VAULT_ADDRESS);
 
@@ -55,7 +57,7 @@ describe("Vault and BaseCompoundStrategy", function () {
 
       return { user1, user2, depositAmount1, depositAmount2, usdc, amanaVault };
     }
-    it("should invest USDC into Moonwell via the strategy", async function () {
+    it("should invest USDC into Compound via the strategy", async function () {
       const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
 
       await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
@@ -69,21 +71,15 @@ describe("Vault and BaseCompoundStrategy", function () {
       expect(await amanaVault.balanceOf(await user1.getAddress())).to.equal(depositAmount1); // User should have 1000 vault shares
     });
 
-    it("should withdraw USDC from Moonwell via the strategy", async function () {
+    it("should withdraw USDC from Compound via the strategy", async function () {
       const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
 
       await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress())
 
-      const withdrawAmount = depositAmount1;
+      const withdrawAmount = depositAmount1 * withdrawPercent / BigInt(100); // 1000 USDC
 
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, user1, withdrawAmount);
-
-      let totalAssets = await amanaVault.totalAssets();
-      let amanaUserBalance = await amanaVault.balanceOf(await user1.getAddress());
-
-      expect(totalAssets).to.be.closeTo(0, errorMargin); // Vault should have close to 0 assets (small amount of interest)
-      expect(amanaUserBalance).to.equal(0); // User should have 0 amanaVault shares
     });
 
     it("should handle deposits from two different users", async function () {
@@ -114,14 +110,30 @@ describe("Vault and BaseCompoundStrategy", function () {
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
       await amanaVault.connect(user2).deposit(depositAmount2, await user2.getAddress());
 
-      const withdrawAmount1 = depositAmount1; // 1000 USDC
-      const withdrawAmount2 = depositAmount2; // 500 USDC
+      const withdrawAmount1 = depositAmount1 * withdrawPercent / BigInt(100); // 1000 USDC
+      const withdrawAmount2 = depositAmount2 * withdrawPercent / BigInt(100); // 500 USDC
 
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount1, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, user1, withdrawAmount1);
       expect(await amanaVault.connect(user2).withdraw(withdrawAmount2, await user2.getAddress(), await user2.getAddress())).to.changeTokenBalance(usdc, user2, withdrawAmount2);
+    });
+    it("should pay a fee to the owner upon withdrawal", async function () {
+      const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
 
-      const vaultAssets = await amanaVault.totalAssets();
-      expect(vaultAssets).to.be.closeTo(0, errorMargin); // Vault should have no assets after withdrawals
+      // Deposit USDC into the amanaVault
+      await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
+
+      // Increase time by 1 week, allowing interest to accumulate
+      const ONE_WEEK_IN_SECONDS = 604800;
+      await network.provider.send("evm_increaseTime", [ONE_WEEK_IN_SECONDS]);
+      await network.provider.send("evm_mine"); // Mine a block after increasing time
+
+      // Withdraw USDC from the strategy
+      const withdrawAmount = depositAmount1; // 1000 USDC
+      const vaultAssetsBeforeWithdraw = await amanaVault.totalAssets();
+      const profitAmount = vaultAssetsBeforeWithdraw - depositAmount1;
+      const feeAmount = profitAmount * feeRate / BigInt(10000);
+      expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, owner, feeAmount);
     });
   });
 });

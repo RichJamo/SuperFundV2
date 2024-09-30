@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, network } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
@@ -17,6 +17,7 @@ describe("Vault and BaseMoonwellStrategy", function () {
   let user1: Signer;
   let user2: Signer;
   const errorMargin = 5;
+  const feeRate = BigInt(1000); // 10% fee
 
   describe("BaseMoonwellStrategy Investment", function () {
     async function setup() {
@@ -122,6 +123,25 @@ describe("Vault and BaseMoonwellStrategy", function () {
 
       const vaultAssets = await amanaVault.totalAssets();
       expect(vaultAssets).to.be.closeTo(0, errorMargin); // Vault should have no assets after withdrawals
+    });
+    it("should pay a fee to the owner upon withdrawal", async function () {
+      const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
+
+      // Deposit USDC into the amanaVault
+      await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
+
+      // Increase time by 1 week, allowing interest to accumulate
+      const ONE_WEEK_IN_SECONDS = 604800;
+      await network.provider.send("evm_increaseTime", [ONE_WEEK_IN_SECONDS]);
+      await network.provider.send("evm_mine"); // Mine a block after increasing time
+
+      // Withdraw USDC from the strategy
+      const withdrawAmount = depositAmount1; // 1000 USDC
+      const vaultAssetsBeforeWithdraw = await amanaVault.totalAssets();
+      const profitAmount = vaultAssetsBeforeWithdraw - depositAmount1;
+      const feeAmount = profitAmount * feeRate / BigInt(10000);
+      expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, owner, feeAmount);
     });
   });
 });
