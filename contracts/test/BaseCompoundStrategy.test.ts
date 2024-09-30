@@ -2,15 +2,15 @@ import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-import { UpgradeableVault, IERC20, IERC4626, BaseMoonwellStrategy } from "../typechain";
+import { UpgradeableVault, IERC20, IERC4626, BaseCompoundStrategy } from "../typechain";
 
 import { BASE_USDC_ADDRESS } from "../../frontend/src/constants/index";
-import { MOONWELL_BASE_USDC_VAULT_ADDRESS } from "../../frontend/src/constants/index";
+import { COMPOUND_BASE_USDC_VAULT_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_USDC_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
 
-describe("Vault and BaseMoonwellStrategy", function () {
+describe("Vault and BaseCompoundStrategy", function () {
   let amanaVault: UpgradeableVault;
-  let strategy: BaseMoonwellStrategy;
+  let strategy: BaseCompoundStrategy;
   let usdc: IERC20;
   let moonwellVault: IERC4626;
   let owner: Signer;
@@ -18,14 +18,14 @@ describe("Vault and BaseMoonwellStrategy", function () {
   let user2: Signer;
   const errorMargin = 5;
 
-  describe("BaseMoonwellStrategy Investment", function () {
+  describe("BaseCompoundStrategy Investment", function () {
     async function setup() {
       // Get signers
       [owner, user1, user2] = await ethers.getSigners();
 
       // Forked USDC contract and Moonwell Pool
       usdc = await ethers.getContractAt("IERC20", BASE_USDC_ADDRESS);
-      moonwellVault = await ethers.getContractAt("IERC4626", MOONWELL_BASE_USDC_VAULT_ADDRESS);
+      moonwellVault = await ethers.getContractAt("IERC4626", COMPOUND_BASE_USDC_VAULT_ADDRESS);
 
       // Deploy Vault contract
       const Vault = await ethers.getContractFactory("UpgradeableVault", owner);
@@ -36,9 +36,9 @@ describe("Vault and BaseMoonwellStrategy", function () {
         { initializer: "initialize" }
       );
 
-      // Deploy BaseMoonwellStrategy contract and set the amanaVault address
-      const BaseMoonwellStrategy = await ethers.getContractFactory("BaseMoonwellStrategy", owner);
-      strategy = await BaseMoonwellStrategy.deploy("MoonwellUSDC", await amanaVault.getAddress(), BASE_USDC_ADDRESS, MOONWELL_BASE_USDC_VAULT_ADDRESS);
+      // Deploy BaseCompoundStrategy contract and set the amanaVault address
+      const BaseCompoundStrategy = await ethers.getContractFactory("BaseCompoundStrategy", owner);
+      strategy = await BaseCompoundStrategy.deploy("MoonwellUSDC", await amanaVault.getAddress(), BASE_USDC_ADDRESS, COMPOUND_BASE_USDC_VAULT_ADDRESS);
 
       // Set the strategy address in the amanaVault
       await amanaVault.setStrategy(await strategy.getAddress());

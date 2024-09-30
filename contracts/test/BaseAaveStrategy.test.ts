@@ -2,10 +2,9 @@ import { ethers, upgrades } from "hardhat";
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
-import { UpgradeableVault, IAavePool, BaseAaveStrategy, IERC20 } from "../typechain";
+import { UpgradeableVault, BaseAaveStrategy, IERC20 } from "../typechain";
 
 import { BASE_USDC_ADDRESS } from "../../frontend/src/constants/index";
-import { BASE_AAVE_POOL_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_AAVE_RECEIPT_TOKEN_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_USDC_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
 
@@ -13,7 +12,6 @@ describe("Vault and BaseAaveStrategy", function () {
   let amanaVault: UpgradeableVault;
   let strategy: BaseAaveStrategy;
   let usdc: IERC20;
-  let aavePool: IAavePool;
   let aaveToken: IERC20;
   let owner: Signer;
   let user1: Signer;
@@ -51,23 +49,16 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Forked USDC contract and Aave Pool
       usdc = await ethers.getContractAt("IERC20", BASE_USDC_ADDRESS);
-      aavePool = await ethers.getContractAt("IAavePool", BASE_AAVE_POOL_ADDRESS);
       aaveToken = await ethers.getContractAt("IERC20", BASE_AAVE_RECEIPT_TOKEN_ADDRESS);
 
       // Deploy the UpgradeableVault using OpenZeppelin's upgrade proxy pattern
-      const Vault = await ethers.getContractFactory("UpgradeableVault");
-      console.log("Deploying UpgradeableVault...");
+      const Vault = await ethers.getContractFactory("UpgradeableVault", owner);
       // Use the upgrades library to deploy the proxy
       amanaVault = await upgrades.deployProxy(
         Vault,
         ["AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS, await owner.getAddress(), 1000],
         { initializer: "initialize" }
       );
-      console.log("UpgradeableVault deployed...");
-      // Wait for deployment confirmations
-      // await amanaVault.deploymentTransaction().wait(5);
-
-      console.log(`UpgradeableVault deployed at: ${await amanaVault.getAddress()}`);
 
       // Deploy BaseAaveStrategy contract and set the amanaVault address
       const BaseAaveStrategy = await ethers.getContractFactory("BaseAaveStrategy", owner);
@@ -109,16 +100,12 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Deposit USDC into the amanaVault
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
-      console.log("amanaVaultBalance after deposit: ", await amanaVault.balanceOf(await user1.getAddress()));
       const withdrawAmount = depositAmount1; // 1000 USDC
 
       let aBaseUSDCBalance = await aaveToken.balanceOf(await strategy.getAddress());
-      console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
       // Withdraw USDC from the strategy
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, user1, withdrawAmount);
       aBaseUSDCBalance = await aaveToken.balanceOf(await strategy.getAddress());
-      console.log("aBaseUSDCBalance", aBaseUSDCBalance.toString());
-      console.log("amanaVaultBalance after withdrawal: ", await amanaVault.balanceOf(await user1.getAddress()));
 
       // Check that USDC is back in the amanaVault
       expect(aBaseUSDCBalance).to.be.closeTo(0, errorMargin); // Should have 0 aBaseUSDC tokens after investment
