@@ -1047,6 +1047,11 @@
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==
 
+"@types/mixpanel-browser@^2.50.0":
+  version "2.50.0"
+  resolved "https://registry.yarnpkg.com/@types/mixpanel-browser/-/mixpanel-browser-2.50.0.tgz#965af33ddd3e0c114c4080573ae2d80aa4c04f45"
+  integrity sha512-RkGTkkDUw3Tm/GEmcS/x8t2mNrt34jgrEWLVM6oSnoe/+bk/WQP1EWaHLk3pCDc3IaXHNoweoNMa1iWLLF0yFQ==
+
 "@types/node@18.15.13":
   version "18.15.13"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.15.13.tgz#f64277c341150c979e42b00e4ac289290c9df469"
