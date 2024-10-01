@@ -16,3 +16,4 @@ cache_forge
 access_token
 
 venv/
+.DS_Store
