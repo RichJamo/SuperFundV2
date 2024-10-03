@@ -11,6 +11,7 @@ import { base } from "thirdweb/chains";
 import { BASE_USDC_ADDRESS } from "@/constants";
 import mixpanel from "mixpanel-browser";
 import Footer from "../components/Footer";
+import { Account } from "thirdweb/wallets";
 
 const wallets = [
   inAppWallet({
@@ -31,6 +32,12 @@ const wallets = [
 interface FeatureCardProps {
   title: React.ReactNode; // Change from string to React.ReactNode to allow JSX
   description: string;
+}
+
+interface AuthenticatedAppProps {
+  account: Account;
+  activeSection: "vaults" | "buy" | "about";
+  setActiveSection: React.Dispatch<React.SetStateAction<"vaults" | "buy" | "about">>;
 }
 
 const FeatureCard: React.FC<FeatureCardProps> = ({ title, description }) => (
@@ -81,7 +88,7 @@ export default function Page() {
   );
 }
 
-function AuthenticatedApp({ account, activeSection, setActiveSection }) {
+function AuthenticatedApp({ account, activeSection, setActiveSection }: AuthenticatedAppProps) {
   return (
     <div className="flex flex-row h-screen">
       {/* Sidebar */}
