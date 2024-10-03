@@ -139,7 +139,7 @@ function AuthenticatedApp({ account, activeSection, setActiveSection }: Authenti
       </div>
 
       {/* Connect Button at the top-right */}
-      <div className="absolute top-0 right-0">
+      <div className="absolute top-5 right-5">
         <ConnectButton
           client={client}
           wallets={wallets}
@@ -166,7 +166,15 @@ function UnauthenticatedLandingPage() {
       <header className="flex justify-between items-center py-6">
         <div className="text-2xl font-bold">Amana</div>
         <nav className="flex space-x-4">
-          <ConnectButton client={client} wallets={wallets} connectButton={{ label: "Launch App" }} />
+          <ConnectButton 
+              client={client} 
+              wallets={wallets} 
+              connectButton={{ label: "Launch App" }} 
+              connectModal={{ size: "compact" }}
+              accountAbstraction={{
+                chain: base,
+                sponsorGas: true,
+              }}/>
         </nav>
       </header>
 
