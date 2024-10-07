@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IStrategy.sol";
+import "hardhat/console.sol";
 
 contract UpgradeableVault is
     Initializable,
@@ -293,7 +294,8 @@ contract UpgradeableVault is
         uint256 shares = previewWithdraw(assets);
 
         uint256 feeWithdrawn = _calculateAndApplyFee(user, assets);
-
+        console.log("feeWithdrawn: %s", feeWithdrawn);
+        console.log("assets: %s", assets);
         IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
         if (feeWithdrawn > 0) {
             emit PerformanceFeePaid(user, feeWithdrawn);
@@ -339,19 +341,21 @@ contract UpgradeableVault is
         uint256 principalWithdrawn;
         uint256 profit;
         uint256 fee;
-
+        console.log("totalUserAssets: %s", totalUserAssets);
+        console.log("principal: %s", principal);
         if (totalUserAssets > principal) {
             profit = totalUserAssets - principal;
+            console.log("profit: %s", profit);
 
             fee = (profit * performanceFeeRate) / (10000 - performanceFeeRate);
-
+            console.log("fee: %s", fee);
             principalWithdrawn = (assets * principal) / totalUserAssets;
             uint256 profitWithdrawn = assets - principalWithdrawn;
-
+            console.log("profitWithdrawn: %s", profitWithdrawn);
             feeWithdrawn =
                 (profit * performanceFeeRate * profitWithdrawn) /
                 (profit * (10000 - performanceFeeRate));
-
+            console.log("feeWithdrawn: %s", feeWithdrawn);
             userPrincipal[user] -= principalWithdrawn;
         } else {
             principalWithdrawn = assets;

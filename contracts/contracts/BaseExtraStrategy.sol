@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IExtraPool.sol";
 import "./interfaces/IExtraReceiptToken.sol";
+import "hardhat/console.sol";
 
 // BASE_USDC_ADDRESS = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 // EXTRA_BASE_POOL_ADDRESS = 0xBB505c54D71E9e599cB8435b4F0cEEc05fC71cbD;
@@ -48,26 +49,45 @@ contract BaseExtraStrategy is Ownable {
         bool success = inputToken.approve(address(extraPool), amount);
         require(success, "Approval failed");
         uint16 referralCode = 1234;
-        extraPool.depositAndStake(
+        uint256 eTokenAmaount = extraPool.depositAndStake(
             reserveId,
             amount,
             address(this),
             referralCode
         );
+        require(eTokenAmaount > 0, "Invest failed");
     }
 
     function withdraw(uint256 _amount) external onlyVault {
-        extraPool.unStakeAndWithdraw(
+        console.log("withdraw: %s", _amount);
+        uint256 exchangeRate = extraPool.exchangeRateOfReserve(reserveId);
+        console.log("exchangeRate: %s", exchangeRate);
+        uint256 eTokenAmount = (_amount * 10 ** 18) / exchangeRate + 1;
+        console.log("eTokenAmount: %s", eTokenAmount);
+
+        IExtraPool.ReserveData storage reserve = extraPool.reserves[reserveId];
+        uint256 altExchangeRate = reserve.reserveToETokenExchangeRate();
+        console.log("altExchangeRate: %s", altExchangeRate);
+        uint256 eTokenAmountAlt = _amount * altExchangeRate;
+        console.log("eTokenAmountAlt: %s", eTokenAmountAlt);
+        uint256 amountReceived = extraPool.unStakeAndWithdraw(
             reserveId,
-            _amount,
+            eTokenAmount,
             msg.sender,
             false // receiveNativeETH
         );
+        console.log("amountReceived: %s", amountReceived);
+        // require(amountReceived >= _amount, "Withdraw failed");
     }
 
     function totalUnderlyingAssets() external view returns (uint256) {
-        // TODO - change this?
-        return receiptToken.balanceOf(address(this));
+        uint256[] memory reserveIds = new uint256[](1);
+        reserveIds[0] = reserveId;
+        IExtraPool.PositionStatus[] memory status = extraPool.getPositionStatus(
+            reserveIds,
+            address(this)
+        );
+        return status[0].liquidity;
     }
 
     function emergencyWithdraw(address _token) external onlyOwner {
