@@ -26,6 +26,15 @@ contract UpgradeableVault is
     uint16 public performanceFeeRate;
     uint256 private totalPrincipal;
 
+    IERC20 public rewardToken;
+    uint256 public rewardAmount;
+    uint256 public rewardPerBlock;
+    uint256 public lastRewardBlock;
+    uint256 public startBlock;
+    uint256 public endBlock;
+
+    mapping(address => uint256) public rewards;
+
     mapping(address => uint256) private userPrincipal;
 
     event StrategyUpdated(address indexed newStrategy);
@@ -57,7 +66,6 @@ contract UpgradeableVault is
         _decimals = IERC20Metadata(address(asset_)).decimals();
         treasuryAddress = treasuryAddress_;
         performanceFeeRate = performanceFeeRate_;
-
         emit VaultInitialized(_decimals, performanceFeeRate_);
     }
 
@@ -67,6 +75,53 @@ contract UpgradeableVault is
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyOwner {}
+
+    function setRewardToken(IERC20 rewardToken_) external onlyOwner {
+        rewardToken = rewardToken_;
+    }
+
+    function setRewardDuration(
+        uint256 startBlock_,
+        uint256 endBlock_
+    ) external onlyOwner {
+        require(
+            endBlock_ > startBlock_,
+            "End block must be greater than start block"
+        );
+        startBlock = startBlock_;
+        endBlock = endBlock_;
+    }
+
+    function setRewardAmount(uint256 rewardAmount_) external onlyOwner {
+        require(rewardAmount_ > 0, "Reward amount must be greater than 0");
+        rewardAmount = rewardAmount_;
+    }
+
+    function startCampaign() external onlyOwner {
+        require(rewardToken != IERC20(address(0)), "Reward token not set");
+        require(rewardAmount > 0, "Reward amount not set");
+        require(endBlock > startBlock, "Invalid block range");
+
+        rewardPerBlock = rewardAmount / (endBlock - startBlock); // Calculate rewards per block
+    }
+
+    function updateRewards(address user) internal {
+        uint256 currentBlock = block.number;
+        if (currentBlock > lastRewardBlock) {
+            uint256 blocksSinceLastUpdate = currentBlock - lastRewardBlock;
+            uint256 reward = blocksSinceLastUpdate * rewardPerBlock;
+            rewards[user] += reward;
+            lastRewardBlock = currentBlock;
+        }
+    }
+
+    function claimRewards() public {
+        updateRewards(msg.sender); // Update rewards first
+        uint256 reward = rewards[msg.sender]; // Get the reward amount
+        require(reward > 0, "No rewards to claim");
+        rewards[msg.sender] = 0; // Reset rewards
+        rewardToken.transfer(msg.sender, reward); // Transfer rewards
+    }
 
     function setStrategy(address _strategyAddress) external onlyOwner {
         require(_strategyAddress != address(0), "Invalid strategy address");
@@ -241,6 +296,8 @@ contract UpgradeableVault is
             "ERC4626: deposit more than max"
         );
 
+        updateRewards(receiver);
+
         uint256 shares = previewDeposit(assets);
 
         userPrincipal[receiver] += assets;
@@ -270,6 +327,8 @@ contract UpgradeableVault is
     ) public virtual override returns (uint256) {
         require(shares <= maxMint(receiver), "ERC4626: mint more than max");
 
+        updateRewards(receiver);
+
         uint256 assets = previewMint(shares);
 
         userPrincipal[receiver] += assets;
@@ -289,6 +348,8 @@ contract UpgradeableVault is
         address user
     ) public virtual override returns (uint256) {
         require(assets <= maxWithdraw(user), "ERC4626: withdraw more than max");
+
+        updateRewards(user);
 
         uint256 shares = previewWithdraw(assets);
 
@@ -313,6 +374,8 @@ contract UpgradeableVault is
         address user
     ) public virtual override returns (uint256) {
         require(shares <= maxRedeem(user), "ERC4626: redeem more than max");
+
+        updateRewards(user);
 
         uint256 assets = previewRedeem(shares);
 
