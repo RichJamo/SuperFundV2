@@ -5,19 +5,24 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers"
 import { UpgradeableVault, BaseAaveStrategy, IERC20 } from "../typechain";
 
 import { BASE_USDC_ADDRESS } from "../../frontend/src/constants/index";
+import { BASE_USDT_ADDRESS } from "../../frontend/src/constants/index";
+
 import { BASE_AAVE_RECEIPT_TOKEN_ADDRESS } from "../../frontend/src/constants/index";
 import { BASE_USDC_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
+import { BASE_USDT_HOLDER_ADDRESS } from "../../frontend/src/constants/index";
 
 describe("Vault and BaseAaveStrategy", function () {
   let amanaVault: UpgradeableVault;
   let strategy: BaseAaveStrategy;
   let usdc: IERC20;
+  let usdt: IERC20;
   let aaveToken: IERC20;
   let owner: Signer;
   let user1: Signer;
   let user2: Signer;
   const errorMargin = 5;
   const FeeRate = BigInt(1000); // 10% fee
+  const rewardAmount = ethers.parseUnits("100", 6);
 
   // other tests:
   // - withdraw max amount
@@ -77,7 +82,17 @@ describe("Vault and BaseAaveStrategy", function () {
 
       await usdc.connect(usdcHolder).transfer(await user1.getAddress(), depositAmount1);
       await usdc.connect(usdcHolder).transfer(await user2.getAddress(), depositAmount2);
-      return { user1, user2, depositAmount1, depositAmount2, usdc, amanaVault };
+
+      const usdtHolder = await ethers.getImpersonatedSigner(BASE_USDT_HOLDER_ADDRESS);
+      usdt = await ethers.getContractAt("IERC20", BASE_USDT_ADDRESS);
+
+      const vaultAddress = await amanaVault.getAddress();
+      console.log("Vault address: ", vaultAddress);
+      console.log(rewardAmount.toString());
+      console.log(await usdt.balanceOf(await usdtHolder.getAddress()));
+      await usdt.connect(usdtHolder).transfer(vaultAddress, rewardAmount);
+      console.log("Transferred USDT to vault");
+      return { owner, user1, user2, depositAmount1, depositAmount2, usdc, usdt, amanaVault };
     }
     it("should invest USDC into Aave via the strategy", async function () {
       const { user1, depositAmount1, usdc, amanaVault } = await loadFixture(setup);
@@ -174,5 +189,44 @@ describe("Vault and BaseAaveStrategy", function () {
       const feeAmount = profitAmount * FeeRate / BigInt(10000);
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, owner, feeAmount);
     });
+
+    it("should distribute and claim rewards", async function () {
+      const { user1, depositAmount1, usdc, usdt, amanaVault, owner } = await loadFixture(setup);
+
+      // Get the current block number to calculate the reward period
+      const currentBlock = await ethers.provider.getBlockNumber();
+      const startBlock = currentBlock + 10; // Start rewards 10 blocks later
+      const endBlock = startBlock + 100; // End rewards 100 blocks after start
+
+      // Set reward token, reward duration, and reward amount
+      await amanaVault.connect(owner).setRewardToken(usdt.getAddress()); // Assuming USDC is the reward token for testing
+      await amanaVault.connect(owner).setRewardDuration(startBlock, endBlock);
+      await amanaVault.connect(owner).setRewardAmount(rewardAmount);
+      // Start the rewards campaign
+      await amanaVault.connect(owner).startCampaign();
+
+      // User1 deposits 1000 USDC
+      await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
+      await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
+
+      // Mine blocks to simulate time passing during the reward period
+      const halfwayBlock = startBlock + 50;
+      // Mine the required number of blocks
+      const blocksToMine = halfwayBlock - currentBlock;
+      for (let i = 0; i < blocksToMine; i++) {
+        await ethers.provider.send("evm_mine", []);
+      }
+      // Calculate expected rewards halfway through the campaign
+      const expectedRewardPerBlock = rewardAmount / BigInt(endBlock - startBlock); // Reward per block
+      const blocksElapsed = halfwayBlock - startBlock;
+      const expectedReward = expectedRewardPerBlock * BigInt(blocksElapsed);
+      // User1 should now have accumulated rewards halfway through the campaign
+      await amanaVault.connect(user1).claimRewards(); // Claim the rewards
+
+
+      // Check the rewards balance for user1
+      expect(await usdt.balanceOf(await user1.getAddress())).to.be.closeTo(expectedReward, ethers.parseEther("0.01")); // Allow a small margin for rounding
+    });
+
   });
 });
