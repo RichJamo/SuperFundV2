@@ -35,7 +35,10 @@ describe("Vault and BaseCompoundStrategy", function () {
       amanaVault = await upgrades.deployProxy(
         Vault,
         ["AaveV3USDCVault", "AVU", BASE_USDC_ADDRESS, await owner.getAddress(), 1000],
-        { initializer: "initialize" }
+        {
+          initializer: "initialize",
+          redeployImplementation: "always"
+        }
       );
 
       // Deploy BaseCompoundStrategy contract and set the amanaVault address
