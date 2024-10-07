@@ -87,11 +87,7 @@ describe("Vault and BaseAaveStrategy", function () {
       usdt = await ethers.getContractAt("IERC20", BASE_USDT_ADDRESS);
 
       const vaultAddress = await amanaVault.getAddress();
-      console.log("Vault address: ", vaultAddress);
-      console.log(rewardAmount.toString());
-      console.log(await usdt.balanceOf(await usdtHolder.getAddress()));
       await usdt.connect(usdtHolder).transfer(vaultAddress, rewardAmount);
-      console.log("Transferred USDT to vault");
       return { owner, user1, user2, depositAmount1, depositAmount2, usdc, usdt, amanaVault };
     }
     it("should invest USDC into Aave via the strategy", async function () {
