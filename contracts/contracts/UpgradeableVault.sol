@@ -101,7 +101,7 @@ contract UpgradeableVault is
         require(rewardToken != IERC20(address(0)), "Reward token not set");
         require(rewardAmount > 0, "Reward amount not set");
         require(endBlock > startBlock, "Invalid block range");
-
+        lastRewardBlock = startBlock;
         rewardPerBlock = rewardAmount / (endBlock - startBlock); // Calculate rewards per block
     }
 
