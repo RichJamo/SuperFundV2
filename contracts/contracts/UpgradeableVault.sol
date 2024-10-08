@@ -115,6 +115,19 @@ contract UpgradeableVault is
         }
     }
 
+    function getPendingRewards(address user) public view returns (uint256) {
+        uint256 currentBlock = block.number;
+        uint256 blocksSinceLastUpdate = currentBlock - lastRewardBlock;
+
+        // Calculate the reward for the time elapsed since the last update
+        uint256 reward = blocksSinceLastUpdate * rewardPerBlock;
+
+        // Add the pending reward to the user's current reward balance
+        uint256 pendingRewards = rewards[user] + reward;
+
+        return pendingRewards;
+    }
+
     function claimRewards() public {
         updateRewards(msg.sender); // Update rewards first
         uint256 reward = rewards[msg.sender]; // Get the reward amount
