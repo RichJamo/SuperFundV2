@@ -8,6 +8,7 @@ import "./interfaces/IStrategy.sol";
 
 contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
+    using Math for uint256;
 
     error InvalidStrategyAddress();
     error InvalidTreasuryAddress();
@@ -169,73 +170,48 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
 
     /**
      * @dev Internal conversion function (from assets to shares) with support for rounding direction.
-     *
-     * Will revert if assets > 0, totalSupply > 0 and totalAssets = 0. That corresponds to a case where any asset
-     * would represent an infinite amount of shares.
+     * This version integrates performance fee handling into the OpenZeppelin _convertToShares logic.
      */
     function _convertToShares(
         uint256 assets,
         Math.Rounding rounding
     ) internal view override returns (uint256 shares) {
         VaultStorage storage $ = _getVaultStorage();
-        uint256 supply = totalSupply();
-        uint256 totalAssetsNetOfFee;
-        totalAssets() > $.totalPrincipal
-            ? totalAssetsNetOfFee =
-                totalAssets() -
-                ((totalAssets() - $.totalPrincipal) * $.perfFee) /
-                10000
-            : totalAssetsNetOfFee = totalAssets();
-        return
-            (assets == 0 || supply == 0)
-                ? _initialConvertToShares(assets, rounding)
-                : Math.mulDiv(assets, supply, totalAssetsNetOfFee, rounding);
-    }
+        uint256 totalSupplyWithOffset = totalSupply() + 10 ** _decimalsOffset();
+        uint256 totalAssetsWithFee = totalAssets() + 1;
 
-    /**
-     * @dev Internal conversion function (from assets to shares) to apply when the vault is empty.
-     *
-     * NOTE: Make sure to keep this function consistent with {_initialConvertToAssets} when overriding it.
-     */
-    function _initialConvertToShares(
-        uint256 assets,
-        Math.Rounding /*rounding*/
-    ) internal view virtual returns (uint256 shares) {
-        return assets;
+        // Incorporate fee logic only if totalAssets exceeds totalPrincipal
+        if (totalAssets() > $.totalPrincipal) {
+            totalAssetsWithFee -=
+                ((totalAssets() - $.totalPrincipal) * $.perfFee) /
+                10000;
+        }
+
+        return
+            assets.mulDiv(totalSupplyWithOffset, totalAssetsWithFee, rounding);
     }
 
     /**
      * @dev Internal conversion function (from shares to assets) with support for rounding direction.
+     * This version integrates performance fee handling into the OpenZeppelin _convertToAssets logic.
      */
     function _convertToAssets(
         uint256 shares,
         Math.Rounding rounding
     ) internal view override returns (uint256 assets) {
         VaultStorage storage $ = _getVaultStorage();
-        uint256 supply = totalSupply();
-        uint256 totalAssetsNetOfFee;
-        totalAssets() > $.totalPrincipal
-            ? totalAssetsNetOfFee =
-                totalAssets() -
-                ((totalAssets() - $.totalPrincipal) * $.perfFee) /
-                10000
-            : totalAssetsNetOfFee = totalAssets();
-        return
-            (supply == 0)
-                ? _initialConvertToAssets(shares, rounding)
-                : Math.mulDiv(shares, totalAssetsNetOfFee, supply, rounding);
-    }
+        uint256 totalSupplyWithOffset = totalSupply() + 10 ** _decimalsOffset();
+        uint256 totalAssetsWithFee = totalAssets() + 1;
 
-    /**
-     * @dev Internal conversion function (from shares to assets) to apply when the vault is empty.
-     *
-     * NOTE: Make sure to keep this function consistent with {_initialConvertToShares} when overriding it.
-     */
-    function _initialConvertToAssets(
-        uint256 shares,
-        Math.Rounding /*rounding*/
-    ) internal view virtual returns (uint256 assets) {
-        return shares;
+        // Incorporate fee logic only if totalAssets exceeds totalPrincipal
+        if (totalAssets() > $.totalPrincipal) {
+            totalAssetsWithFee -=
+                ((totalAssets() - $.totalPrincipal) * $.perfFee) /
+                10000;
+        }
+
+        return
+            shares.mulDiv(totalAssetsWithFee, totalSupplyWithOffset, rounding);
     }
 
     /**
