@@ -183,42 +183,50 @@ describe("Vault and BaseAaveStrategy", function () {
       const vaultAssetsBeforeWithdraw = await amanaVault.totalAssets();
       const profitAmount = vaultAssetsBeforeWithdraw - depositAmount1;
       const feeAmount = profitAmount * FeeRate / BigInt(10000);
+      console.log(feeAmount.toString());
       expect(await amanaVault.connect(user1).withdraw(withdrawAmount, await user1.getAddress(), await user1.getAddress())).to.changeTokenBalance(usdc, owner, feeAmount);
     });
 
-    it("should distribute and claim rewards", async function () {
+    it("should distribute and claim rewards (time-based)", async function () {
       const { user1, depositAmount1, usdc, usdt, amanaVault, owner } = await loadFixture(setup);
 
-      // Get the current block number to calculate the reward period
-      const currentBlock = await ethers.provider.getBlockNumber();
-      const startBlock = currentBlock + 10; // Start rewards 10 blocks later
-      const endBlock = startBlock + 100; // End rewards 100 blocks after start
+      // Get the current block timestamp to calculate the reward period
+      const currentBlock = await ethers.provider.getBlock("latest");
+      const currentTimestamp = currentBlock.timestamp;
+
+      const startTimestamp = currentTimestamp + 600; // Start rewards 600 seconds (10 minutes) later
+      const rewardDuration = 3600; // Reward duration: 1 hour (3600 seconds)
+      const endTimestamp = startTimestamp + rewardDuration; // End rewards after 1 hour
 
       // Set reward token, reward duration, and reward amount
-      await amanaVault.connect(owner).setRewardToken(usdt.getAddress()); // Assuming USDC is the reward token for testing
-      await amanaVault.connect(owner).setRewardsInterval(startBlock, endBlock, rewardAmount);
+      await amanaVault.connect(owner).setRewardToken(usdt.getAddress()); // Set USDT as the reward token for testing
+      await amanaVault.connect(owner).setRewardsInterval(startTimestamp, endTimestamp, rewardAmount);
 
       // User1 deposits 1000 USDC
       await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
       await amanaVault.connect(user1).deposit(depositAmount1, await user1.getAddress());
 
-      // Mine blocks to simulate time passing during the reward period
-      const halfwayBlock = startBlock + 50;
-      // Mine the required number of blocks
-      const blocksToMine = halfwayBlock - currentBlock;
-      for (let i = 0; i < blocksToMine; i++) {
-        await ethers.provider.send("evm_mine", []);
-      }
+      // Simulate time passing during the reward period
+      const halfwayTime = startTimestamp + (rewardDuration / 2);
+      const secondsToSimulate = halfwayTime - currentTimestamp;
+      await ethers.provider.send("evm_increaseTime", [secondsToSimulate]); // Increase time by half of the reward duration
+      await ethers.provider.send("evm_mine", []); // Trigger a block to update the blockchain timestamp
+
+      const newBlock = await ethers.provider.getBlock("latest");
+      const newTimestamp = newBlock.timestamp;
+
       // Calculate expected rewards halfway through the campaign
-      const expectedRewardPerBlock = rewardAmount / BigInt(endBlock - startBlock); // Reward per block
-      const blocksElapsed = halfwayBlock - startBlock;
-      const expectedReward = expectedRewardPerBlock * BigInt(blocksElapsed);
+      const expectedRewardPerSecond = rewardAmount / BigInt(rewardDuration); // Reward per second
+
+      const timeElapsed = newTimestamp - startTimestamp;
+
+      const expectedReward = expectedRewardPerSecond * BigInt(timeElapsed);
+
       // User1 should now have accumulated rewards halfway through the campaign
       await amanaVault.connect(user1).claimRewards(user1); // Claim the rewards
 
-
       // Check the rewards balance for user1
-      expect(await usdt.balanceOf(await user1.getAddress())).to.be.closeTo(expectedReward, ethers.parseEther("0.01")); // Allow a small margin for rounding
+      expect(await usdt.balanceOf(await user1.getAddress())).to.be.closeTo(expectedReward, ethers.parseUnits("1", 6)); // Allow a small margin for rounding
     });
 
   });
