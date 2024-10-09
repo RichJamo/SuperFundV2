@@ -1,46 +1,38 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "./ERC4626RewardsUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/interfaces/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IStrategy.sol";
 
-contract UpgradeableVault is
-    Initializable,
-    ERC20Upgradeable,
-    ERC4626Upgradeable,
-    UUPSUpgradeable,
-    OwnableUpgradeable
-{
+contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
+
+    // Custom errors
+    error InvalidStrategyAddress();
+    error InvalidTreasuryAddress();
+    error FeeExceedsLimit();
+    error DepositMoreThanMax();
+    error MintMoreThanMax();
+    error WithdrawMoreThanMax();
+    error RedeemMoreThanMax();
+    error ApprovalFailed();
+    error NothingToWithdraw();
 
     IERC20 private _asset;
     uint8 private _decimals;
-    address public strategyAddress;
-    address public treasuryAddress;
-    uint16 public performanceFeeRate;
+    address public strategy;
+    address public treasury;
+    uint16 public perfFee;
     uint256 private totalPrincipal;
-
-    IERC20 public rewardToken;
-    uint256 public rewardAmount;
-    uint256 public rewardPerBlock;
-    uint256 public lastRewardBlock;
-    uint256 public startBlock;
-    uint256 public endBlock;
-
-    mapping(address => uint256) public rewards;
 
     mapping(address => uint256) private userPrincipal;
 
-    event StrategyUpdated(address indexed newStrategy);
-    event PerformanceFeePaid(address indexed user, uint256 amount);
-    event PerformanceFeeUpdated(uint256 newFeeRate);
-    event VaultInitialized(uint8 decimals, uint256 performanceFeeRate);
+    event StratUpdated(address indexed newStrategy);
+    event PerfFeePaid(address indexed user, uint256 amount);
+    event PerfFeeUpdated(uint256 newFee);
+    event VaultInitialized(uint8 decimals, uint256 perfFee);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -54,19 +46,19 @@ contract UpgradeableVault is
         string memory name_,
         string memory symbol_,
         IERC20 asset_,
-        address treasuryAddress_,
-        uint16 performanceFeeRate_
+        address treasury_,
+        uint16 perfFee_
     ) external initializer {
-        require(treasuryAddress_ != address(0), "Invalid treasury address");
+        if (treasury_ == address(0)) revert InvalidTreasuryAddress();
         __ERC20_init(name_, symbol_);
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
 
         _asset = asset_;
         _decimals = IERC20Metadata(address(asset_)).decimals();
-        treasuryAddress = treasuryAddress_;
-        performanceFeeRate = performanceFeeRate_;
-        emit VaultInitialized(_decimals, performanceFeeRate_);
+        treasury = treasury_;
+        perfFee = perfFee_;
+        emit VaultInitialized(_decimals, perfFee_);
     }
 
     /**
@@ -76,98 +68,30 @@ contract UpgradeableVault is
         address newImplementation
     ) internal override onlyOwner {}
 
-    function setRewardToken(IERC20 rewardToken_) external onlyOwner {
-        rewardToken = rewardToken_;
+    function setStrategy(address _strategy) external onlyOwner {
+        if (_strategy == address(0)) revert InvalidStrategyAddress();
+        strategy = _strategy;
+        emit StratUpdated(_strategy);
     }
 
-    function setRewardDuration(
-        uint256 startBlock_,
-        uint256 endBlock_
-    ) external onlyOwner {
-        require(
-            endBlock_ > startBlock_,
-            "End block must be greater than start block"
-        );
-        startBlock = startBlock_;
-        endBlock = endBlock_;
+    function updateTreasury(address _treasury) external onlyOwner {
+        if (_treasury == address(0)) revert InvalidTreasuryAddress();
+        treasury = _treasury;
     }
 
-    function setRewardAmount(uint256 rewardAmount_) external onlyOwner {
-        require(rewardAmount_ > 0, "Reward amount must be greater than 0");
-        rewardAmount = rewardAmount_;
+    function setPerfFee(uint16 newFee) external onlyOwner {
+        if (newFee > 2000) revert FeeExceedsLimit();
+        perfFee = newFee;
+        emit PerfFeeUpdated(newFee);
     }
 
-    function startCampaign() external onlyOwner {
-        require(rewardToken != IERC20(address(0)), "Reward token not set");
-        require(rewardAmount > 0, "Reward amount not set");
-        require(endBlock > startBlock, "Invalid block range");
-        lastRewardBlock = startBlock;
-        rewardPerBlock = rewardAmount / (endBlock - startBlock); // Calculate rewards per block
-    }
+    function switchStrat(address newStrategy) external onlyOwner {
+        if (newStrategy == address(0)) revert InvalidStrategyAddress();
+        if (newStrategy == strategy) revert InvalidStrategyAddress();
 
-    function updateRewards(address user) internal {
-        uint256 currentBlock = block.number;
-        if (currentBlock > lastRewardBlock) {
-            uint256 blocksSinceLastUpdate = currentBlock - lastRewardBlock;
-            uint256 reward = blocksSinceLastUpdate * rewardPerBlock;
-            rewards[user] += reward;
-            lastRewardBlock = currentBlock;
-        }
-    }
-
-    function getPendingRewards(address user) public view returns (uint256) {
-        uint256 currentBlock = block.number;
-        uint256 blocksSinceLastUpdate = currentBlock - lastRewardBlock;
-
-        // Calculate the reward for the time elapsed since the last update
-        uint256 reward = blocksSinceLastUpdate * rewardPerBlock;
-
-        // Add the pending reward to the user's current reward balance
-        uint256 pendingRewards = rewards[user] + reward;
-
-        return pendingRewards;
-    }
-
-    function claimRewards() public {
-        updateRewards(msg.sender); // Update rewards first
-        uint256 reward = rewards[msg.sender]; // Get the reward amount
-        require(reward > 0, "No rewards to claim");
-        rewards[msg.sender] = 0; // Reset rewards
-        rewardToken.transfer(msg.sender, reward); // Transfer rewards
-    }
-
-    function setStrategy(address _strategyAddress) external onlyOwner {
-        require(_strategyAddress != address(0), "Invalid strategy address");
-        strategyAddress = _strategyAddress;
-        emit StrategyUpdated(_strategyAddress);
-    }
-
-    function updateTreasuryAddress(
-        address _treasuryAddress
-    ) external onlyOwner {
-        require(_treasuryAddress != address(0), "Invalid treasury address");
-        treasuryAddress = _treasuryAddress;
-    }
-
-    function setPerformanceFee(uint16 newFeeRate) external onlyOwner {
-        require(newFeeRate <= 2000, "Fee must be less than or equal to 20%");
-        performanceFeeRate = newFeeRate;
-        emit PerformanceFeeUpdated(newFeeRate);
-    }
-
-    function switchStrategy(address newStrategy) external onlyOwner {
-        require(
-            newStrategy != address(0),
-            "New strategy is not a valid address"
-        );
-        require(
-            newStrategy != strategyAddress,
-            "New strategy must be different"
-        );
-
-        address oldStrategy = strategyAddress;
-        strategyAddress = newStrategy;
-        emit StrategyUpdated(newStrategy);
+        address oldStrategy = strategy;
+        strategy = newStrategy;
+        emit StratUpdated(newStrategy);
 
         uint256 strategyBalance = IStrategy(oldStrategy)
             .totalUnderlyingAssets();
@@ -177,22 +101,16 @@ contract UpgradeableVault is
 
         uint256 vaultBalance = _asset.balanceOf(address(this));
         if (vaultBalance > 0) {
-            bool success = _asset.approve(strategyAddress, vaultBalance);
-            require(success, "Approval failed");
-            IStrategy(strategyAddress).invest(vaultBalance);
+            bool success = _asset.approve(strategy, vaultBalance);
+            if (!success) revert ApprovalFailed();
+            IStrategy(strategy).invest(vaultBalance);
         }
     }
 
     function emergencyWithdraw(address _token) external onlyOwner {
         uint256 balance = IERC20(_token).balanceOf(address(this));
-        require(balance > 0, "No tokens to withdraw");
+        if (balance == 0) revert NothingToWithdraw();
         SafeERC20.safeTransfer(IERC20(_token), owner(), balance);
-    }
-
-    function emergencyWithdrawETH() external onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No ETH to withdraw");
-        payable(owner()).transfer(balance);
     }
 
     /**
@@ -205,7 +123,7 @@ contract UpgradeableVault is
         public
         view
         virtual
-        override(ERC20Upgradeable, ERC4626Upgradeable)
+        override(ERC4626Upgradeable)
         returns (uint8)
     {
         return _decimals;
@@ -223,8 +141,7 @@ contract UpgradeableVault is
         uint256 usdcBalance = _asset.balanceOf(address(this));
 
         // Call the strategy to get the equivalent value of aArbUSDC in terms of USDC
-        uint256 strategyUSDCValue = IStrategy(strategyAddress)
-            .totalUnderlyingAssets();
+        uint256 strategyUSDCValue = IStrategy(strategy).totalUnderlyingAssets();
 
         // Return the total assets: USDC held in the vault + USDC equivalent held in the strategy
         return usdcBalance + strategyUSDCValue;
@@ -304,29 +221,13 @@ contract UpgradeableVault is
         uint256 assets,
         address receiver
     ) public virtual override returns (uint256) {
-        require(
-            assets <= maxDeposit(receiver),
-            "ERC4626: deposit more than max"
-        );
-
-        updateRewards(receiver);
+        if (assets > maxDeposit(receiver)) revert DepositMoreThanMax();
 
         uint256 shares = previewDeposit(assets);
 
-        userPrincipal[receiver] += assets;
-        totalPrincipal += assets;
-
         _deposit(_msgSender(), receiver, assets, shares);
 
-        allocateToStrategy(assets);
-
         return shares;
-    }
-
-    function allocateToStrategy(uint256 amount) private {
-        bool success = _asset.approve(strategyAddress, amount);
-        require(success, "Approval failed");
-        IStrategy(strategyAddress).invest(amount);
     }
 
     /** @dev See {IERC4626-mint}.
@@ -338,14 +239,9 @@ contract UpgradeableVault is
         uint256 shares,
         address receiver
     ) public virtual override returns (uint256) {
-        require(shares <= maxMint(receiver), "ERC4626: mint more than max");
-
-        updateRewards(receiver);
+        if (shares > maxMint(receiver)) revert MintMoreThanMax();
 
         uint256 assets = previewMint(shares);
-
-        userPrincipal[receiver] += assets;
-        totalPrincipal += assets;
 
         _deposit(_msgSender(), receiver, assets, shares);
 
@@ -360,19 +256,8 @@ contract UpgradeableVault is
         address receiver,
         address user
     ) public virtual override returns (uint256) {
-        require(assets <= maxWithdraw(user), "ERC4626: withdraw more than max");
-
-        updateRewards(user);
-
+        if (assets > maxWithdraw(user)) revert WithdrawMoreThanMax();
         uint256 shares = previewWithdraw(assets);
-
-        uint256 feeWithdrawn = _calculateAndApplyFee(user, assets);
-
-        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
-        if (feeWithdrawn > 0) {
-            emit PerformanceFeePaid(user, feeWithdrawn);
-            SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
-        }
 
         _withdraw(_msgSender(), receiver, user, assets, shares);
         return shares;
@@ -386,27 +271,16 @@ contract UpgradeableVault is
         address receiver,
         address user
     ) public virtual override returns (uint256) {
-        require(shares <= maxRedeem(user), "ERC4626: redeem more than max");
-
-        updateRewards(user);
+        if (shares > maxRedeem(user)) revert RedeemMoreThanMax();
 
         uint256 assets = previewRedeem(shares);
-
-        uint256 feeWithdrawn = _calculateAndApplyFee(user, assets);
-
-        IStrategy(strategyAddress).withdraw(assets + feeWithdrawn);
-
-        if (feeWithdrawn > 0) {
-            emit PerformanceFeePaid(user, feeWithdrawn);
-            SafeERC20.safeTransfer(_asset, treasuryAddress, feeWithdrawn);
-        }
 
         _withdraw(_msgSender(), receiver, user, assets, shares);
 
         return assets;
     }
 
-    function _calculateAndApplyFee(
+    function _applyFee(
         address user,
         uint256 assets
     ) internal returns (uint256 feeWithdrawn) {
@@ -419,14 +293,14 @@ contract UpgradeableVault is
         if (totalUserAssets > principal) {
             profit = totalUserAssets - principal;
 
-            fee = (profit * performanceFeeRate) / (10000 - performanceFeeRate);
+            fee = (profit * perfFee) / (10000 - perfFee);
 
             principalWithdrawn = (assets * principal) / totalUserAssets;
             uint256 profitWithdrawn = assets - principalWithdrawn;
 
             feeWithdrawn =
-                (profit * performanceFeeRate * profitWithdrawn) /
-                (profit * (10000 - performanceFeeRate));
+                (profit * perfFee * profitWithdrawn) /
+                (profit * (10000 - perfFee));
 
             userPrincipal[user] -= principalWithdrawn;
         } else {
@@ -453,7 +327,7 @@ contract UpgradeableVault is
         totalAssets() > totalPrincipal
             ? totalAssetsNetOfFee =
                 totalAssets() -
-                ((totalAssets() - totalPrincipal) * performanceFeeRate) /
+                ((totalAssets() - totalPrincipal) * perfFee) /
                 10000
             : totalAssetsNetOfFee = totalAssets();
         return
@@ -486,7 +360,7 @@ contract UpgradeableVault is
         totalAssets() > totalPrincipal
             ? totalAssetsNetOfFee =
                 totalAssets() -
-                ((totalAssets() - totalPrincipal) * performanceFeeRate) /
+                ((totalAssets() - totalPrincipal) * perfFee) /
                 10000
             : totalAssetsNetOfFee = totalAssets();
         return
@@ -523,8 +397,15 @@ contract UpgradeableVault is
         // Conclusion: we need to do the transfer before we mint so that any reentrancy would happen before the
         // assets are transferred and before the shares are minted, which is a valid state.
         // slither-disable-next-line reentrancy-no-eth
+        userPrincipal[receiver] += assets;
+        totalPrincipal += assets;
+
         SafeERC20.safeTransferFrom(_asset, caller, address(this), assets);
         _mint(receiver, shares);
+
+        bool success = _asset.approve(strategy, assets);
+        if (!success) revert ApprovalFailed();
+        IStrategy(strategy).invest(assets);
 
         emit Deposit(caller, receiver, assets, shares);
     }
@@ -542,7 +423,13 @@ contract UpgradeableVault is
         if (caller != user) {
             _spendAllowance(user, caller, shares);
         }
+        uint256 feeWithdrawn = _applyFee(user, assets);
 
+        IStrategy(strategy).withdraw(assets + feeWithdrawn);
+        if (feeWithdrawn > 0) {
+            emit PerfFeePaid(user, feeWithdrawn);
+            SafeERC20.safeTransfer(_asset, treasury, feeWithdrawn);
+        }
         // If _asset is ERC777, `transfer` can trigger a reentrancy AFTER the transfer happens through the
         // `tokensReceived` hook. On the other hand, the `tokensToSend` hook, that is triggered before the transfer,
         // calls the vault, which is assumed not malicious.
