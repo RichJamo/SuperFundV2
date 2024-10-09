@@ -196,10 +196,7 @@ describe("Vault and BaseAaveStrategy", function () {
 
       // Set reward token, reward duration, and reward amount
       await amanaVault.connect(owner).setRewardToken(usdt.getAddress()); // Assuming USDC is the reward token for testing
-      await amanaVault.connect(owner).setRewardDuration(startBlock, endBlock);
-      await amanaVault.connect(owner).setRewardAmount(rewardAmount);
-      // Start the rewards campaign
-      await amanaVault.connect(owner).startCampaign();
+      await amanaVault.connect(owner).setRewardsInterval(startBlock, endBlock, rewardAmount);
 
       // User1 deposits 1000 USDC
       await usdc.connect(user1).approve(await amanaVault.getAddress(), depositAmount1);
@@ -217,7 +214,7 @@ describe("Vault and BaseAaveStrategy", function () {
       const blocksElapsed = halfwayBlock - startBlock;
       const expectedReward = expectedRewardPerBlock * BigInt(blocksElapsed);
       // User1 should now have accumulated rewards halfway through the campaign
-      await amanaVault.connect(user1).claimRewards(); // Claim the rewards
+      await amanaVault.connect(user1).claimRewards(user1); // Claim the rewards
 
 
       // Check the rewards balance for user1
