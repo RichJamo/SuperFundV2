@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
         url: `https://base-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
         blockNumber: 20113140, // Optional: Set a block number to fork from
       },
+      allowUnlimitedContractSize: true,
     },
   },
   solidity: {
