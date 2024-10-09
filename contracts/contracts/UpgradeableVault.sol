@@ -13,10 +13,6 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
     error InvalidStrategyAddress();
     error InvalidTreasuryAddress();
     error FeeExceedsLimit();
-    error DepositMoreThanMax();
-    error MintMoreThanMax();
-    error WithdrawMoreThanMax();
-    error RedeemMoreThanMax();
     error ApprovalFailed();
     error NothingToWithdraw();
 
@@ -221,7 +217,12 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
         uint256 assets,
         address receiver
     ) public virtual override returns (uint256) {
-        if (assets > maxDeposit(receiver)) revert DepositMoreThanMax();
+        if (assets > maxDeposit(receiver))
+            revert ERC4626ExceededMaxDeposit(
+                receiver,
+                assets,
+                maxDeposit(receiver)
+            );
 
         uint256 shares = previewDeposit(assets);
 
@@ -239,7 +240,8 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
         uint256 shares,
         address receiver
     ) public virtual override returns (uint256) {
-        if (shares > maxMint(receiver)) revert MintMoreThanMax();
+        if (shares > maxMint(receiver))
+            revert ERC4626ExceededMaxMint(receiver, shares, maxMint(receiver));
 
         uint256 assets = previewMint(shares);
 
@@ -256,7 +258,8 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
         address receiver,
         address user
     ) public virtual override returns (uint256) {
-        if (assets > maxWithdraw(user)) revert WithdrawMoreThanMax();
+        if (assets > maxWithdraw(user))
+            revert ERC4626ExceededMaxWithdraw(user, assets, maxWithdraw(user));
         uint256 shares = previewWithdraw(assets);
 
         _withdraw(_msgSender(), receiver, user, assets, shares);
@@ -271,7 +274,8 @@ contract UpgradeableVault is ERC4626RewardsUpgradeable, UUPSUpgradeable {
         address receiver,
         address user
     ) public virtual override returns (uint256) {
-        if (shares > maxRedeem(user)) revert RedeemMoreThanMax();
+        if (shares > maxRedeem(user))
+            revert ERC4626ExceededMaxRedeem(user, shares, maxRedeem(user));
 
         uint256 assets = previewRedeem(shares);
 
