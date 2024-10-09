@@ -42,6 +42,10 @@ abstract contract ERC4626RewardsUpgradeable is
     RewardsPerToken public rewardsPerToken;
     mapping(address => UserRewards) public accumulatedRewards;
 
+    function setRewardToken(address _rewardToken) external onlyOwner {
+        rewardToken = IERC20(_rewardToken);
+    }
+
     /// @dev Set a rewards schedule
     function setRewardsInterval(
         uint256 start,
