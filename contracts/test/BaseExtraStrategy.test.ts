@@ -160,6 +160,7 @@ describe("Vault and BaseExtraStrategy", function () {
 
       // Withdraw USDC from the strategy
       const withdrawAmount = depositAmount1 * withdrawPercent / BigInt(100); // 1000 USDC
+      console.log("Withdraw amount: ", withdrawAmount);
       const vaultAssetsBeforeWithdraw = await amanaVault.totalAssets();
       const profitAmount = vaultAssetsBeforeWithdraw - depositAmount1;
       const feeAmount = profitAmount * FeeRate / BigInt(10000);

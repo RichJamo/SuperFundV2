@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IExtraPool.sol";
+import "./interfaces/ILendingPool.sol";
 import "./interfaces/IExtraReceiptToken.sol";
 import "hardhat/console.sol";
 
@@ -16,7 +16,7 @@ contract BaseExtraStrategy is Ownable {
     string public name;
     address public immutable amanaVault;
     IERC20 public immutable inputToken;
-    IExtraPool public immutable extraPool;
+    ILendingPool public immutable extraPool;
     IExtraReceiptToken public immutable receiptToken;
     uint256 reserveId = 24;
 
@@ -31,7 +31,7 @@ contract BaseExtraStrategy is Ownable {
         amanaVault = _amanaVault;
         inputToken = IERC20(_inputTokenAddress);
         receiptToken = IExtraReceiptToken(_receiptTokenAddress);
-        extraPool = IExtraPool(receiptToken.lendingPool());
+        extraPool = ILendingPool(receiptToken.lendingPool());
     }
 
     modifier onlyVault() {
@@ -58,35 +58,81 @@ contract BaseExtraStrategy is Ownable {
         require(eTokenAmaount > 0, "Invest failed");
     }
 
-    function withdraw(uint256 _amount) external onlyVault {
-        console.log("withdraw: %s", _amount);
-        uint256 exchangeRate = extraPool.exchangeRateOfReserve(reserveId);
-        console.log("exchangeRate: %s", exchangeRate);
-        uint256 eTokenAmount = (_amount * 10 ** 18) / exchangeRate + 1;
-        console.log("eTokenAmount: %s", eTokenAmount);
+    // function withdraw(uint256 _amount) external onlyVault {
+    //     uint256 exchangeRate = extraPool.exchangeRateOfReserve(reserveId);
+    //     uint256 eTokenAmount = (_amount * 10 ** 18) / exchangeRate + 1;
 
-        IExtraPool.ReserveData storage reserve = extraPool.reserves[reserveId];
-        uint256 altExchangeRate = reserve.reserveToETokenExchangeRate();
-        console.log("altExchangeRate: %s", altExchangeRate);
-        uint256 eTokenAmountAlt = _amount * altExchangeRate;
-        console.log("eTokenAmountAlt: %s", eTokenAmountAlt);
+    //     uint256 amountReceived = extraPool.unStakeAndWithdraw(
+    //         reserveId,
+    //         eTokenAmount,
+    //         msg.sender,
+    //         true // receiveNativeETH
+    //     );
+
+    //     // require(amountReceived >= _amount, "Withdraw failed");
+    //     return amountReceived;
+    // }
+
+    function withdraw(uint256 _amount) external returns (uint256) {
+        console.log("withdraw: %s", _amount);
+        // Get the user's total balance in underlying tokens and eTokens
+        (
+            uint256 userUnderlyingBalance,
+            uint256 userETokenBalance
+        ) = getBalances();
+
+        // Calculate the proportion (_amount / userUnderlyingBalance)
+        require(userUnderlyingBalance > 0, "No underlying balance available");
+        require(_amount <= userUnderlyingBalance, "Amount exceeds balance");
+
+        uint256 proportion = (_amount * 1e18) / userUnderlyingBalance;
+
+        // Calculate the number of eTokens to redeem
+        uint256 eTokensToRedeem = (userETokenBalance * proportion) / 1e18 + 1;
+
+        // Check if there's enough liquidity in the pool to fulfill the withdrawal request
+        // uint256 availableLiquidity = getAvailableLiquidity();
+        // require(
+        //     eTokensToRedeem <= availableLiquidity,
+        //     "Insufficient pool liquidity for withdrawal"
+        // );
+
+        // Call unStakeAndWithdraw with the calculated number of eTokens
         uint256 amountReceived = extraPool.unStakeAndWithdraw(
             reserveId,
-            eTokenAmount,
+            eTokensToRedeem,
             msg.sender,
-            false // receiveNativeETH
+            true // receiveNativeETH
         );
         console.log("amountReceived: %s", amountReceived);
         // require(amountReceived >= _amount, "Withdraw failed");
+        return amountReceived;
+    }
+
+    function getBalances()
+        internal
+        view
+        returns (uint256 underlyingBalance, uint256 eTokenBalance)
+    {
+        // Create an array with the reserveId to query the user's position
+        uint256[] memory reserveIds = new uint256[](1);
+        reserveIds[0] = reserveId;
+
+        // Get the user's position status from the lending pool
+        ILendingPool.PositionStatus[] memory positionStatuses = extraPool
+            .getPositionStatus(reserveIds, address(this));
+
+        // Extract the relevant data from the user's position
+        ILendingPool.PositionStatus memory position = positionStatuses[0];
+        underlyingBalance = position.liquidity; // User's balance in underlying tokens
+        eTokenBalance = position.eTokenStaked + position.eTokenUnStaked; // Total eToken balance
     }
 
     function totalUnderlyingAssets() external view returns (uint256) {
         uint256[] memory reserveIds = new uint256[](1);
         reserveIds[0] = reserveId;
-        IExtraPool.PositionStatus[] memory status = extraPool.getPositionStatus(
-            reserveIds,
-            address(this)
-        );
+        ILendingPool.PositionStatus[] memory status = extraPool
+            .getPositionStatus(reserveIds, address(this));
         return status[0].liquidity;
     }
 
